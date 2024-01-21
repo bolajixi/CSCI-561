@@ -1,7 +1,7 @@
 import os
 from collections import deque
 
-global SEARCH_ALGORITHM
+global SEARCH_ALGORITHM, start, goal, locations_graph
 INPUT_FILE = "input.txt"
 OUTPUT_FILE = "output.txt"
 FILE_WRITE_FORMAT = "w"
@@ -19,15 +19,18 @@ with open(INPUT_FILE, "r") as input_file:
     UPHILL_ENERGY_LIMIT = int(input_file.readline())
     NUM_SAFE_LOCATIONS = int(input_file.readline())
 
-    locations = {}
+    locations_graph = {}
     for _ in range(NUM_SAFE_LOCATIONS):
         name, x, y, z = input_file.readline().split()
 
         name, x, y, z = name, int(x), int(y), int(z)
-        locations[name] = {"coord": (x, y, z), 'neighbors': []}
+        locations_graph[name] = {'name': name, 'coord': (x, y, z), 'neighbors': []}
 
     NUM_SAFE_PATH_SEGMENTS = input_file.readline().strip()
-    location_relationships = input_file.readlines()
+    relationships = input_file.readlines()
+
+    start = locations_graph['start']
+    goal = locations_graph['goal']
 
 # ---------------------------------------------------------------------------------------------------------------------------------------
 def euclidean_distance_2d(point_a, point_b):
@@ -41,23 +44,21 @@ def euclidean_distance_3d(point_a, point_b):
     return ( (x1 - x2)**2 + (y1 - y2)**2 + (z1 - z2)**2 )**0.5
 
 # ---------------------------------------------------------------------------------------------------------------------------------------
-def build_search_tree(locations, location_relationships, algorithm):
-    for relationship in location_relationships:
+def build_search_tree(locations_graph, relationships, algorithm):
+    for relationship in relationships:
         start_vertex, end_vertex = relationship.strip().split()
 
         if algorithm == "BFS":
             weight = 1
         elif algorithm == "UCS":
-            weight = euclidean_distance_2d(locations[start_vertex]['coord'], locations[end_vertex]['coord'])
+            weight = euclidean_distance_2d(locations_graph[start_vertex]['coord'], locations_graph[end_vertex]['coord'])
         elif algorithm == "A*":
-            weight = euclidean_distance_3d(locations[start_vertex]['coord'], locations[end_vertex]['coord'])
+            weight = euclidean_distance_3d(locations_graph[start_vertex]['coord'], locations_graph[end_vertex]['coord'])
 
-        locations[start_vertex]['neighbors'].append(end_vertex)
-        locations[end_vertex]['neighbors'].append(start_vertex)
-    
-    return locations
+        locations_graph[start_vertex]['neighbors'].append(end_vertex)
+        locations_graph[end_vertex]['neighbors'].append(start_vertex)
 
-search_tree = build_search_tree(locations, location_relationships, SEARCH_ALGORITHM)
+build_search_tree(locations_graph, relationships, SEARCH_ALGORITHM)
 
 # Search Algorithms
 # ---------------------------------------------------------------------------------------------------------------------------------------
@@ -76,15 +77,15 @@ def bfs_search():
             for neighbor, _ in output_dict.get(current_vertex, {}).get('neighbors', []):
                 queue.append((neighbor, path + [neighbor]))
 
-    return None
+    return 'FAIL'
 
 def ucs_search():
 
-    return "ucs"
+    return 'FAIL'
 
 def a_star_search():
 
-    return "a star"
+    return 'FAIL'
 
 
 switcher = {
@@ -98,5 +99,5 @@ def switch(algorithm):
 
 result = switch(SEARCH_ALGORITHM)
 
-# with open(OUTPUT_FILE, FILE_WRITE_FORMAT) as output_file:
-#     output_file.write(result)
+with open(OUTPUT_FILE, FILE_WRITE_FORMAT) as output_file:
+    output_file.write(result)
