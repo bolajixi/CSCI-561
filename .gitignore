@@ -1,4 +1,8 @@
+# Ignore misc files
 .DS_Store
 input.txt
 output.txt
 sample_input.txt
+
+# Ignore testcase folders
+hw1-training-testcases/

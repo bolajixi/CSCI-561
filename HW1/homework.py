@@ -24,7 +24,7 @@ with open(INPUT_FILE, "r") as input_file:
         name, x, y, z = input_file.readline().split()
 
         name, x, y, z = name, int(x), int(y), int(z)
-        locations_graph[name] = {'name': name, 'coord': (x, y, z), 'neighbors': []}
+        locations_graph[name] = {'coord': (x, y, z), 'neighbors': []}
 
     NUM_SAFE_PATH_SEGMENTS = input_file.readline().strip()
     relationships = input_file.readlines()
@@ -62,28 +62,32 @@ build_search_tree(locations_graph, relationships, SEARCH_ALGORITHM)
 
 # Search Algorithms
 # ---------------------------------------------------------------------------------------------------------------------------------------
-def bfs_search():
+def bfs_search(start, goal):
     visited = set()
-    queue = deque([(start, [start])])
+    queue = deque( [(start, [start])] )
 
     while queue:
-        current_vertex, path = queue.popleft()
+        current_vertex_name, path = queue.popleft()
 
-        if current_vertex == goal:
-            return path
+        if current_vertex_name == goal:
+            return ' '.join(path)
 
-        if current_vertex not in visited:
-            visited.add(current_vertex)
-            for neighbor, _ in output_dict.get(current_vertex, {}).get('neighbors', []):
-                queue.append((neighbor, path + [neighbor]))
+        if current_vertex_name not in visited:
+            visited.add(current_vertex_name)
+
+            neighbors = locations_graph.get(current_vertex_name, {}).get('neighbors', [])
+
+            for neighbor_name in neighbors:
+                if neighbor_name not in visited: # Is this check really necessary?
+                    queue.append((neighbor_name, path + [neighbor_name]))
 
     return 'FAIL'
 
-def ucs_search():
+def ucs_search(start, goal):
 
     return 'FAIL'
 
-def a_star_search():
+def a_star_search(start, goal):
 
     return 'FAIL'
 
@@ -94,10 +98,11 @@ switcher = {
     "A*": a_star_search,
 }
 
-def switch(algorithm):
-    return switcher.get(algorithm)()
+def switch(algorithm, start, goal):
+    return switcher.get(algorithm)(start, goal)
 
-result = switch(SEARCH_ALGORITHM)
+result = switch(SEARCH_ALGORITHM, 'start', 'goal')
+print(result)
 
 with open(OUTPUT_FILE, FILE_WRITE_FORMAT) as output_file:
     output_file.write(result)
