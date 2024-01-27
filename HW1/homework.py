@@ -111,6 +111,37 @@ def bfs_search(start, goal):
     return 'FAIL'
 
 def ucs_search(start, goal):
+    visited_states = set()
+    visited = {start: (0, 0)} # (path_distance, momentum)
+    priority_cost_queue = [(0.0, start, [start], 0)]  # (path_distance, current_vertex_name, current_path_to_vertex, prev_energy)
+
+    while priority_cost_queue:
+        path_distance, current_vertex_name, path, prev_energy = heapq.heappop(priority_cost_queue)
+
+        if current_vertex_name == goal:
+            return ' '.join(path)
+
+        momentum = abs(prev_energy) if prev_energy <= 0 else 0
+        current_state = f"{current_vertex_name} {momentum}"
+
+        # if current_state not in visited_states:
+        #     visited_states.add(current_state)
+        neighbors = graph.get(current_vertex_name, {}).get('neighbors', [])
+
+        for neighbor_name, neighbor_cost in neighbors:
+            current_location_coord = graph[current_vertex_name]['coord']
+            next_location_coord = graph[neighbor_name]['coord']
+
+            new_cost = visited[current_vertex_name][0] + neighbor_cost
+            
+            v_cost, v_momentum = visited.get(neighbor_name, (float('inf'), 0))
+            if move_is_allowed(current_location_coord, next_location_coord, momentum)\
+                and ( new_cost < v_cost and momentum >= v_momentum ):
+                
+                visited[neighbor_name] = (new_cost, momentum)
+                energy = get_req_energy(current_location_coord, next_location_coord)
+                
+                heapq.heappush(priority_cost_queue, (new_cost, neighbor_name, path + [neighbor_name], energy))
 
     return 'FAIL'
 
