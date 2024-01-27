@@ -1,8 +1,10 @@
 import os
+import heapq
 from collections import deque
 
-global SEARCH_ALGORITHM, UPHILL_ENERGY_LIMIT, start, goal, locations_graph
-INPUT_FILE = "input.txt"
+global SEARCH_ALGORITHM, UPHILL_ENERGY_LIMIT, start, goal, graph
+INPUT_FILE = "/Users/mobolajiolawale/Documents/GitHub/CSCI_561/HW1/training-v2/input47.txt"
+# INPUT_FILE = "input.txt"
 OUTPUT_FILE = "output.txt"
 FILE_WRITE_FORMAT = "w"
 
@@ -19,39 +21,38 @@ with open(INPUT_FILE, "r") as input_file:
     UPHILL_ENERGY_LIMIT = int(input_file.readline())
     NUM_SAFE_LOCATIONS = int(input_file.readline())
 
-    locations_graph = {}
+    graph = {}
     for _ in range(NUM_SAFE_LOCATIONS):
         name, x, y, z = input_file.readline().split()
 
         name, x, y, z = name, int(x), int(y), int(z)
-        locations_graph[name] = {'coord': (x, y, z), 'neighbors': []}
+        graph[name] = {'coord': (x, y, z), 'neighbors': []}
 
     NUM_SAFE_PATH_SEGMENTS = input_file.readline().strip()
     relationships = input_file.readlines()
 
-    start = locations_graph['start']
-    goal = locations_graph['goal']
+    start = graph['start']
+    goal = graph['goal']
 
 # Helper Functions
 # ---------------------------------------------------------------------------------------------------------------------------------------
-def euclidean_distance_2d(point_a, point_b):
-    x1, y1, z1 = point_a
-    x2, y2, z2 = point_b
-    return ( (x1 - x2)**2 + (y1 - y2)**2 )**0.5
-
-def euclidean_distance_3d(point_a, point_b):
-    x1, y1, z1 = point_a
-    x2, y2, z2 = point_b
-    return ( (x1 - x2)**2 + (y1 - y2)**2 + (z1 - z2)**2 )**0.5
-
-def get_energy(point_a, point_b):
-    x1, y1, z1 = point_a
-    x2, y2, z2 = point_b
+def get_req_energy(vertex_a, vertex_b):
+    x1, y1, z1 = vertex_a
+    x2, y2, z2 = vertex_b
 
     return z2 - z1
 
-def move_is_allowed(current_point, next_point, momentum=0):
-    required_energy = get_energy(current_point, next_point)
+def get_distance(vertex_a, vertex_b, dimension):
+    x1, y1, z1 = vertex_a
+    x2, y2, z2 = vertex_b
+    
+    if dimension == 2:
+        return ( (x1 - x2)**2 + (y1 - y2)**2 )**0.5
+    elif dimension == 3:
+        return ( (x1 - x2)**2 + (y1 - y2)**2 + (z1 - z2)**2 )**0.5
+
+def move_is_allowed(current_vertex, next_vertex, momentum=0):
+    required_energy = get_req_energy(current_vertex, next_vertex)
 
     current_move_is_downhill = True if required_energy < 0 else False
     if current_move_is_downhill:
@@ -62,21 +63,22 @@ def move_is_allowed(current_point, next_point, momentum=0):
 
     return False
 
-def build_search_tree(locations_graph, relationships, algorithm):
+def build_search_graph(graph, relationships, algorithm):
     for relationship in relationships:
-        start_vertex, end_vertex = relationship.strip().split()
+        vertex_a, vertex_b = relationship.strip().split()
+        vertex_a_coord, vertex_b_coord = graph[vertex_a]['coord'], graph[vertex_b]['coord']
 
         if algorithm == "BFS":
-            weight = 1
+            path_distance = 1
         elif algorithm == "UCS":
-            weight = euclidean_distance_2d(locations_graph[start_vertex]['coord'], locations_graph[end_vertex]['coord'])
+            path_distance = get_distance(vertex_a_coord, vertex_b_coord, 2)
         elif algorithm == "A*":
-            weight = euclidean_distance_3d(locations_graph[start_vertex]['coord'], locations_graph[end_vertex]['coord'])
+            path_distance = get_distance(vertex_a_coord, vertex_b_coord, 3)
 
-        locations_graph[start_vertex]['neighbors'].append(end_vertex)
-        locations_graph[end_vertex]['neighbors'].append(start_vertex)
+        graph[vertex_a]['neighbors'].append([vertex_b, path_distance])
+        graph[vertex_b]['neighbors'].append([vertex_a, path_distance])
 
-build_search_tree(locations_graph, relationships, SEARCH_ALGORITHM)
+build_search_graph(graph, relationships, SEARCH_ALGORITHM)
 
 # Search Algorithms
 # ---------------------------------------------------------------------------------------------------------------------------------------
@@ -96,14 +98,14 @@ def bfs_search(start, goal):
 
         if current_state not in visited_states:
             visited_states.add(current_state)
-            neighbors = locations_graph.get(current_vertex_name, {}).get('neighbors', [])
+            neighbors = graph.get(current_vertex_name, {}).get('neighbors', [])
 
-            for neighbor_name in neighbors:
-                current_location_coord = locations_graph[current_vertex_name]['coord']
-                next_location_coord = locations_graph[neighbor_name]['coord']
+            for neighbor_name, _ in neighbors:
+                current_vertex_coord = graph[current_vertex_name]['coord']
+                next_vertex_coord = graph[neighbor_name]['coord']
 
-                if move_is_allowed(current_location_coord, next_location_coord, momentum):
-                    prev_energy = get_energy(current_location_coord, next_location_coord)
+                if move_is_allowed(current_vertex_coord, next_vertex_coord, momentum):
+                    prev_energy = get_req_energy(current_vertex_coord, next_vertex_coord)
                     queue.append((neighbor_name, path + [neighbor_name], prev_energy))
 
     return 'FAIL'
