@@ -1,6 +1,9 @@
 import os
 import heapq
+import time
 from collections import deque
+
+start_time = time.time()
 
 global SEARCH_ALGORITHM, UPHILL_ENERGY_LIMIT, start, goal, graph
 INPUT_FILE = "/Users/mobolajiolawale/Documents/GitHub/CSCI_561/HW1/training-v2/input11.txt"
@@ -204,7 +207,6 @@ def a_star_search(start, goal):
             current_location_coord = graph[current_vertex_name]['coord']
     return 'FAIL'
 
-
 switcher = {
     "BFS": bfs_search,
     "UCS": ucs_search,
@@ -215,10 +217,9 @@ def switch(algorithm, start, goal):
     return switcher.get(algorithm)(start, goal)
 
 result = switch(SEARCH_ALGORITHM, 'start', 'goal')
-print(len(result.split(' '))-1, '\n', result)
+
+elapsed_time = time.time() - start_time
+print(f"Length = {len(result.split(' ')) - 1} \nElapsed Time = {'%.2f' % round(elapsed_time, 2)} seconds \n\n{result}")
 
 # with open(OUTPUT_FILE, FILE_WRITE_FORMAT) as output_file:
 #     output_file.write(result)
-
-
-
