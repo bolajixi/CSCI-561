@@ -115,33 +115,33 @@ def bfs_search(start, goal):
     return 'FAIL'
 
 def ucs_search(start, goal):
-    visited_states = set(('start', 0))
+    visited_states = {('start', 0): 0}
     priority_cost_queue = [(0.0, start, [start], 0)]  # (path_distance, current_vertex_name, current_path_to_vertex, prev_energy)
 
     while priority_cost_queue:
-        path_distance, current_vertex_name, path, prev_energy = heapq.heappop(priority_cost_queue)
+        path_distance, current_vertex_name, path, current_momentum = heapq.heappop(priority_cost_queue)
 
         if current_vertex_name == goal:
             return ' '.join(path)
 
-        momentum = abs(prev_energy) if prev_energy <= 0 else 0
         neighbors = graph.get(current_vertex_name, {}).get('neighbors', [])
 
         for neighbor_name, distance_to_neighbor in neighbors:
             current_location_coord = graph[current_vertex_name]['coord']
             next_location_coord = graph[neighbor_name]['coord']
 
-            if move_is_allowed(current_location_coord, next_location_coord, momentum):
+            if move_is_allowed(current_location_coord, next_location_coord, current_momentum):
                 new_distance = path_distance + distance_to_neighbor
+
+                energy = get_req_energy(current_location_coord, next_location_coord)
+                next_momentum = abs(energy) if energy <= 0 else 0
                 
-                current_state = (neighbor_name, momentum)
+                current_state = (neighbor_name, next_momentum)
                 if current_state in visited_states:
                     continue
 
-                visited_states.add(current_state)
-                energy = get_req_energy(current_location_coord, next_location_coord)
-
-                heapq.heappush(priority_cost_queue, (new_distance, neighbor_name, path + [neighbor_name], energy))
+                visited_states[current_state] = 0
+                heapq.heappush(priority_cost_queue, (new_distance, neighbor_name, path + [neighbor_name], next_momentum))
 
     return 'FAIL'
 
