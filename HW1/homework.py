@@ -3,8 +3,8 @@ import heapq
 from collections import deque
 
 global SEARCH_ALGORITHM, UPHILL_ENERGY_LIMIT, start, goal, graph
-INPUT_FILE = "/Users/mobolajiolawale/Documents/GitHub/CSCI_561/HW1/training-v2/input47.txt"
-# INPUT_FILE = "input.txt"
+INPUT_FILE = "/Users/mobolajiolawale/Documents/GitHub/CSCI_561/HW1/training-v2/input11.txt"
+# INPUT_FILE = "sample_input.txt"
 OUTPUT_FILE = "output.txt"
 FILE_WRITE_FORMAT = "w"
 
@@ -63,6 +63,9 @@ def move_is_allowed(current_vertex, next_vertex, momentum=0):
 
     return False
 
+def heuristics(vertex_a, vertex_b):
+    return get_distance(vertex_a, vertex_b, 3)
+
 def build_search_graph(graph, relationships, algorithm):
     for relationship in relationships:
         vertex_a, vertex_b = relationship.strip().split()
@@ -111,6 +114,75 @@ def bfs_search(start, goal):
     return 'FAIL'
 
 def ucs_search(start, goal):
+    # visited_states = set()
+    visited_states = {start: (0, 0)} # (path_distance, momentum)
+    priority_cost_queue = [(0.0, start, [start], 0)]  # (path_distance, current_vertex_name, current_path_to_vertex, prev_energy)
+
+    while priority_cost_queue:
+        path_distance, current_vertex_name, path, prev_energy = heapq.heappop(priority_cost_queue)
+
+        if current_vertex_name == goal:
+            return ' '.join(path)
+
+        momentum = abs(prev_energy) if prev_energy <= 0 else 0
+        current_state = f"{current_vertex_name} {momentum}"
+
+        # if current_state not in visited_states:
+        #     visited_states.add(current_state)
+        neighbors = graph.get(current_vertex_name, {}).get('neighbors', [])
+
+        for neighbor_name, distance_to_neighbor in neighbors:
+            current_location_coord = graph[current_vertex_name]['coord']
+            next_location_coord = graph[neighbor_name]['coord']
+
+            new_distance = visited_states[current_vertex_name][0] + distance_to_neighbor
+            
+            v_cost, v_momentum = visited_states.get(neighbor_name, (float('inf'), 0))
+            if move_is_allowed(current_location_coord, next_location_coord, momentum)\
+                and ( new_distance < v_cost or momentum == 0 and prev_energy < 0 ):
+                
+                visited_states[neighbor_name] = (new_distance, momentum)
+                energy = get_req_energy(current_location_coord, next_location_coord)
+
+                heapq.heappush(priority_cost_queue, (new_distance, neighbor_name, path + [neighbor_name], energy))
+
+    return 'FAIL'
+
+def ucs_search_v2(start, goal):
+    visited_states = {} 
+    priority_cost_queue = [(0.0, start, [start], 0)]  # (path_distance, current_vertex_name, current_path_to_vertex, prev_energy)
+
+    while priority_cost_queue:
+        path_distance, current_vertex_name, path, prev_energy = heapq.heappop(priority_cost_queue)
+
+        if current_vertex_name == goal:
+            return ' '.join(path)
+
+        momentum = abs(prev_energy) if prev_energy <= 0 else 0
+        current_state = (path_distance, momentum) # (path_distance, momentumValue)
+        visited_states[current_vertex_name] = current_state
+
+        neighbors = graph.get(current_vertex_name, {}).get('neighbors', [])
+
+        for neighbor_name, distance_to_neighbor in neighbors:
+            current_location_coord = graph[current_vertex_name]['coord']
+            next_location_coord = graph[neighbor_name]['coord']
+
+            # new_distance = visited_states[current_vertex_name][0] + distance_to_neighbor
+            new_distance = path_distance + distance_to_neighbor
+            prev_distance, prev_momentum = visited_states.get(neighbor_name, (float('inf'), 0))
+
+            if move_is_allowed(current_location_coord, next_location_coord, momentum):
+                # and ( new_distance < prev_distance or (current_vertex_name in visited_states and momentum > 0 and momentum > prev_momentum) ):
+                
+                visited_states[neighbor_name] = (new_distance, momentum)
+                energy = get_req_energy(current_location_coord, next_location_coord)
+
+                heapq.heappush(priority_cost_queue, (new_distance, neighbor_name, path + [neighbor_name], energy))
+
+    return 'FAIL'
+
+def a_star_search(start, goal):
     visited_states = set()
     visited = {start: (0, 0)} # (path_distance, momentum)
     priority_cost_queue = [(0.0, start, [start], 0)]  # (path_distance, current_vertex_name, current_path_to_vertex, prev_energy)
@@ -128,25 +200,8 @@ def ucs_search(start, goal):
         #     visited_states.add(current_state)
         neighbors = graph.get(current_vertex_name, {}).get('neighbors', [])
 
-        for neighbor_name, neighbor_cost in neighbors:
+        for neighbor_name, distance_to_neighbor in neighbors:
             current_location_coord = graph[current_vertex_name]['coord']
-            next_location_coord = graph[neighbor_name]['coord']
-
-            new_cost = visited[current_vertex_name][0] + neighbor_cost
-            
-            v_cost, v_momentum = visited.get(neighbor_name, (float('inf'), 0))
-            if move_is_allowed(current_location_coord, next_location_coord, momentum)\
-                and ( new_cost < v_cost and momentum >= v_momentum ):
-                
-                visited[neighbor_name] = (new_cost, momentum)
-                energy = get_req_energy(current_location_coord, next_location_coord)
-                
-                heapq.heappush(priority_cost_queue, (new_cost, neighbor_name, path + [neighbor_name], energy))
-
-    return 'FAIL'
-
-def a_star_search(start, goal):
-
     return 'FAIL'
 
 
