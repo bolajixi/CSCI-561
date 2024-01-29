@@ -74,12 +74,10 @@ def build_search_graph(graph, relationships, algorithm):
         vertex_a, vertex_b = relationship.strip().split()
         vertex_a_coord, vertex_b_coord = graph[vertex_a]['coord'], graph[vertex_b]['coord']
 
-        if algorithm == "BFS":
-            path_distance = 1
-        elif algorithm == "UCS":
+        path_distance = "_"
+            
+        if algorithm == "UCS":
             path_distance = get_distance(vertex_a_coord, vertex_b_coord, 2)
-        elif algorithm == "A*":
-            path_distance = get_distance(vertex_a_coord, vertex_b_coord, 3)
 
         graph[vertex_a]['neighbors'].append([vertex_b, path_distance])
         graph[vertex_b]['neighbors'].append([vertex_a, path_distance])
@@ -117,8 +115,7 @@ def bfs_search(start, goal):
     return 'FAIL'
 
 def ucs_search(start, goal):
-    # visited_states = set()
-    visited_states = {start: (0, 0)} # (path_distance, momentum)
+    visited_states = set(('start', 0))
     priority_cost_queue = [(0.0, start, [start], 0)]  # (path_distance, current_vertex_name, current_path_to_vertex, prev_energy)
 
     while priority_cost_queue:
@@ -128,23 +125,20 @@ def ucs_search(start, goal):
             return ' '.join(path)
 
         momentum = abs(prev_energy) if prev_energy <= 0 else 0
-        current_state = f"{current_vertex_name} {momentum}"
-
-        # if current_state not in visited_states:
-        #     visited_states.add(current_state)
         neighbors = graph.get(current_vertex_name, {}).get('neighbors', [])
 
         for neighbor_name, distance_to_neighbor in neighbors:
             current_location_coord = graph[current_vertex_name]['coord']
             next_location_coord = graph[neighbor_name]['coord']
 
-            new_distance = visited_states[current_vertex_name][0] + distance_to_neighbor
-            
-            v_cost, v_momentum = visited_states.get(neighbor_name, (float('inf'), 0))
-            if move_is_allowed(current_location_coord, next_location_coord, momentum)\
-                and ( new_distance < v_cost or momentum == 0 and prev_energy < 0 ):
+            if move_is_allowed(current_location_coord, next_location_coord, momentum):
+                new_distance = path_distance + distance_to_neighbor
                 
-                visited_states[neighbor_name] = (new_distance, momentum)
+                current_state = (neighbor_name, momentum)
+                if current_state in visited_states:
+                    continue
+
+                visited_states.add(current_state)
                 energy = get_req_energy(current_location_coord, next_location_coord)
 
                 heapq.heappush(priority_cost_queue, (new_distance, neighbor_name, path + [neighbor_name], energy))
