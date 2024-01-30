@@ -151,8 +151,9 @@ def a_star_search(start, goal):
     start_coord = graph[start]['coord']
     goal_coord = graph[goal]['coord']
 
+    start_heuristic_value = heuristics(start_coord, goal_coord)
     visited_states = {('start', 0): 0}
-    priority_cost_queue = [(heuristics(start_coord, goal_coord), 0.0, start, [start], 0)] #(f_cost, path_distance, current_vertex_name, current_path_to_vertex, prev_energy)
+    priority_cost_queue = [(start_heuristic_value, 0.0, start, [start], 0)] #(f_cost, path_distance, current_vertex_name, current_path_to_vertex, prev_energy)
 
     while priority_cost_queue:
         _, path_distance, current_vertex_name, path, current_momentum = heapq.heappop(priority_cost_queue)
