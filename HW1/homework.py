@@ -6,8 +6,8 @@ from collections import deque
 start_time = time.time()
 
 global SEARCH_ALGORITHM, UPHILL_ENERGY_LIMIT, start, goal, graph
-# INPUT_FILE = "/Users/mobolajiolawale/Documents/GitHub/CSCI_561/HW1/training-v2/input15.txt"
-INPUT_FILE = "input.txt"
+INPUT_FILE = "/Users/mobolajiolawale/Documents/GitHub/CSCI_561/HW1/training-v2/input10.txt"
+# INPUT_FILE = "input.txt"
 OUTPUT_FILE = "output.txt"
 FILE_WRITE_FORMAT = "w"
 
@@ -176,7 +176,7 @@ def a_star_search(start, goal):
                 next_momentum = abs(energy) if energy <= 0 else 0
                 
                 current_state = (neighbor_name, next_momentum)
-                if current_state in visited_states and new_distance > visited_states[current_state]:
+                if (current_state in visited_states) and (new_distance > visited_states[current_state]):
                     continue
 
                 visited_states[current_state] = new_distance
