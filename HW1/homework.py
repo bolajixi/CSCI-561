@@ -6,8 +6,8 @@ from collections import deque
 start_time = time.time()
 
 global SEARCH_ALGORITHM, UPHILL_ENERGY_LIMIT, start, goal, graph
-INPUT_FILE = "/Users/mobolajiolawale/Documents/GitHub/CSCI_561/HW1/training-v2/input10.txt"
-# INPUT_FILE = "sample_input.txt"
+# INPUT_FILE = "/Users/mobolajiolawale/Documents/GitHub/CSCI_561/HW1/training-v2/input15.txt"
+INPUT_FILE = "input.txt"
 OUTPUT_FILE = "output.txt"
 FILE_WRITE_FORMAT = "w"
 
@@ -152,7 +152,7 @@ def a_star_search(start, goal):
     goal_coord = graph[goal]['coord']
 
     visited_states = {('start', 0): 0}
-    priority_cost_queue = [(heuristics(start_coord, goal_coord), 0.0, start, [start], 0)] #(path_distance, current_vertex_name, current_path_to_vertex, prev_energy)
+    priority_cost_queue = [(heuristics(start_coord, goal_coord), 0.0, start, [start], 0)] #(f_cost, path_distance, current_vertex_name, current_path_to_vertex, prev_energy)
 
     while priority_cost_queue:
         _, path_distance, current_vertex_name, path, current_momentum = heapq.heappop(priority_cost_queue)
@@ -167,8 +167,9 @@ def a_star_search(start, goal):
             next_location_coord = graph[neighbor_name]['coord']
 
             if move_is_allowed(current_location_coord, next_location_coord, current_momentum):
-                new_distance = path_distance + distance_to_neighbor
                 heuristic_value = heuristics(next_location_coord, goal_coord)
+                new_distance = path_distance + distance_to_neighbor
+                f_cost = new_distance + heuristic_value
 
                 energy = get_req_energy(current_location_coord, next_location_coord)
                 next_momentum = abs(energy) if energy <= 0 else 0
@@ -178,7 +179,7 @@ def a_star_search(start, goal):
                     continue
 
                 visited_states[current_state] = new_distance
-                heapq.heappush(priority_cost_queue, (heuristic_value, new_distance, neighbor_name, path + [neighbor_name], next_momentum))
+                heapq.heappush(priority_cost_queue, (f_cost, new_distance, neighbor_name, path + [neighbor_name], next_momentum))
 
     return 'FAIL'
 
@@ -196,5 +197,5 @@ result = switch(SEARCH_ALGORITHM, 'start', 'goal')
 elapsed_time = time.time() - start_time
 print(f"Length = {len(result.split(' ')) - 1} \nElapsed Time = {'%.2f' % round(elapsed_time, 2)} seconds \n\n{result}")
 
-# with open(OUTPUT_FILE, FILE_WRITE_FORMAT) as output_file:
-#     output_file.write(result)
+with open(OUTPUT_FILE, FILE_WRITE_FORMAT) as output_file:
+    output_file.write(result)
