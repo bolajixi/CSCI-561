@@ -6,7 +6,7 @@ from collections import deque
 start_time = time.time()
 
 global SEARCH_ALGORITHM, UPHILL_ENERGY_LIMIT, start, goal, graph
-INPUT_FILE = "/Users/mobolajiolawale/Documents/GitHub/CSCI_561/HW1/training-v2/input11.txt"
+INPUT_FILE = "/Users/mobolajiolawale/Documents/GitHub/CSCI_561/HW1/training-v2/input10.txt"
 # INPUT_FILE = "sample_input.txt"
 OUTPUT_FILE = "output.txt"
 FILE_WRITE_FORMAT = "w"
@@ -66,8 +66,8 @@ def move_is_allowed(current_vertex, next_vertex, momentum=0):
 
     return False
 
-def heuristics(vertex_a, vertex_b):
-    return get_distance(vertex_a, vertex_b, 3)
+def heuristics(vertex, goal):
+    return get_distance(vertex, goal, 3)
 
 def build_search_graph(graph, relationships, algorithm):
     for relationship in relationships:
@@ -78,6 +78,8 @@ def build_search_graph(graph, relationships, algorithm):
             
         if algorithm == "UCS":
             path_distance = get_distance(vertex_a_coord, vertex_b_coord, 2)
+        elif algorithm == "A*":
+            path_distance = get_distance(vertex_a_coord, vertex_b_coord, 3)
 
         graph[vertex_a]['neighbors'].append([vertex_b, path_distance])
         graph[vertex_b]['neighbors'].append([vertex_a, path_distance])
@@ -146,25 +148,38 @@ def ucs_search(start, goal):
     return 'FAIL'
 
 def a_star_search(start, goal):
-    visited_states = set()
-    visited = {start: (0, 0)} # (path_distance, momentum)
-    priority_cost_queue = [(0.0, start, [start], 0)]  # (path_distance, current_vertex_name, current_path_to_vertex, prev_energy)
+    start_coord = graph[start]['coord']
+    goal_coord = graph[goal]['coord']
+
+    visited_states = {('start', 0): 0}
+    priority_cost_queue = [(heuristics(start_coord, goal_coord), 0.0, start, [start], 0)] #(path_distance, current_vertex_name, current_path_to_vertex, prev_energy)
 
     while priority_cost_queue:
-        path_distance, current_vertex_name, path, prev_energy = heapq.heappop(priority_cost_queue)
+        _, path_distance, current_vertex_name, path, current_momentum = heapq.heappop(priority_cost_queue)
 
         if current_vertex_name == goal:
             return ' '.join(path)
 
-        momentum = abs(prev_energy) if prev_energy <= 0 else 0
-        current_state = f"{current_vertex_name} {momentum}"
-
-        # if current_state not in visited_states:
-        #     visited_states.add(current_state)
         neighbors = graph.get(current_vertex_name, {}).get('neighbors', [])
 
         for neighbor_name, distance_to_neighbor in neighbors:
             current_location_coord = graph[current_vertex_name]['coord']
+            next_location_coord = graph[neighbor_name]['coord']
+
+            if move_is_allowed(current_location_coord, next_location_coord, current_momentum):
+                new_distance = path_distance + distance_to_neighbor
+                heuristic_value = heuristics(next_location_coord, goal_coord)
+
+                energy = get_req_energy(current_location_coord, next_location_coord)
+                next_momentum = abs(energy) if energy <= 0 else 0
+                
+                current_state = (neighbor_name, next_momentum)
+                if current_state in visited_states and new_distance > visited_states[current_state]:
+                    continue
+
+                visited_states[current_state] = new_distance
+                heapq.heappush(priority_cost_queue, (heuristic_value, new_distance, neighbor_name, path + [neighbor_name], next_momentum))
+
     return 'FAIL'
 
 switcher = {
