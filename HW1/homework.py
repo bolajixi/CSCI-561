@@ -69,8 +69,9 @@ def move_is_allowed(current_vertex, next_vertex, momentum=0):
 def heuristics(type, vertex, goal):
     if type == "euclidean":
         return get_distance(vertex, goal, 3)
-    if type == "manhattan":
-        return ""
+    elif type == "biased_euclidean":
+        bias = 0.8
+        return bias * get_distance(vertex, goal, 3)
 
 def build_search_graph(graph, relationships, algorithm):
     for relationship in relationships:
@@ -154,7 +155,7 @@ def a_star_search(start, goal):
     start_coord = graph[start]['coord']
     goal_coord = graph[goal]['coord']
 
-    start_heuristic_value = heuristics('euclidean', start_coord, goal_coord)
+    start_heuristic_value = heuristics('biased_euclidean', start_coord, goal_coord)
     visited_states = {('start', 0): 0}
     priority_cost_queue = [(start_heuristic_value, 0.0, start, [start], 0)] #(f_cost, path_distance, current_vertex_name, current_path_to_vertex, prev_energy)
 
@@ -171,7 +172,7 @@ def a_star_search(start, goal):
             next_location_coord = graph[neighbor_name]['coord']
 
             if move_is_allowed(current_location_coord, next_location_coord, current_momentum):
-                heuristic_value = heuristics('euclidean', next_location_coord, goal_coord)
+                heuristic_value = heuristics('biased_euclidean', next_location_coord, goal_coord)
                 new_distance = path_distance + distance_to_neighbor
                 f_cost = new_distance + heuristic_value
 
@@ -199,7 +200,7 @@ def switch(algorithm, start, goal):
 result = switch(SEARCH_ALGORITHM, 'start', 'goal')
 
 elapsed_time = time.time() - start_time
-print(f"Length = {len(result.split(' ')) - 1} \nElapsed Time = {'%.2f' % round(elapsed_time, 2)} seconds \n\n{result}")
+print(f"Path Length = {len(result.split(' ')) - 1} \nElapsed Time = {'%.2f' % round(elapsed_time, 2)} seconds \n\n{result}")
 
 with open(OUTPUT_FILE, FILE_WRITE_FORMAT) as output_file:
     output_file.write(result)
