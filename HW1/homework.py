@@ -141,7 +141,7 @@ def ucs_search(start, goal):
                 next_momentum = abs(energy) if energy <= 0 else 0
                 
                 current_state = (neighbor_name, next_momentum)
-                if current_state in visited_states and new_distance > visited_states[current_state]:
+                if current_state in visited_states and new_distance >= visited_states[current_state]:
                     continue
 
                 visited_states[current_state] = new_distance
@@ -178,7 +178,7 @@ def a_star_search(start, goal):
                 next_momentum = abs(energy) if energy <= 0 else 0
                 
                 current_state = (neighbor_name, next_momentum)
-                if (current_state in visited_states) and (new_distance > visited_states[current_state]):
+                if (current_state in visited_states) and (new_distance >= visited_states[current_state]):
                     continue
 
                 visited_states[current_state] = new_distance
