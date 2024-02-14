@@ -201,4 +201,4 @@ elapsed_time = time.time() - start_time
 print(f"Path Length = {len(result.split(' ')) - 1} \nElapsed Time = {'%.2f' % round(elapsed_time, 2)} seconds \n\n{result}")
 
 with open(OUTPUT_FILE, FILE_WRITE_FORMAT) as output_file:
-    output_file.write(result)
+    output_file.write(result + "\n")
