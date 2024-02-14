@@ -6,4 +6,5 @@ sample_input.txt
 
 # Ignore testcase folders
 hw1-training-testcases/
+testcases/
 training-v2/

@@ -6,8 +6,8 @@ from collections import deque
 start_time = time.time()
 
 global SEARCH_ALGORITHM, UPHILL_ENERGY_LIMIT, start, goal, graph
-# INPUT_FILE = "/Users/mobolajiolawale/Documents/GitHub/CSCI_561/HW1/training-v2/input39.txt"
-INPUT_FILE = "input.txt"
+INPUT_FILE = "/Users/mobolajiolawale/Documents/GitHub/CSCI_561/HW1/testcases/input7.txt"
+# INPUT_FILE = "input.txt"
 OUTPUT_FILE = "output.txt"
 FILE_WRITE_FORMAT = "w"
 
