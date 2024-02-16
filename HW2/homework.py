@@ -61,8 +61,10 @@ class GameState:
         # self.prev_board = prev_board
 
         self.player = player
-        self.is_maximizer = True if player == "X" else False
-        self.is_minimizer = True if player == "O" else False
+        self.opponent = 'X' if player == 'O' else 'O'
+
+        self.is_maximizer = True if player == 'X' else False
+        self.is_minimizer = True if player == 'O' else False
 
         self.alpha = -float('inf')
         self.beta = float('inf')
@@ -93,10 +95,9 @@ class GameState:
 
     def check_direction(self, x, y, dx, dy):
         # Check if placing a disc at this position will flip any opponent's discs *** in this direction ***
-        opponent = 'X' if self.player == 'O' else 'O'
         x += dx
         y += dy
-        if x < 0 or x >= len(self.board) or y < 0 or y >= len(self.board[0]) or self.board[x][y] != opponent:
+        if x < 0 or x >= len(self.board) or y < 0 or y >= len(self.board[0]) or self.board[x][y] != self.opponent:
             return False
         x += dx
         y += dy
@@ -127,18 +128,20 @@ class MinimaxAlphaBeta:
     def utility(self, state, type):
         if type == "discDifference":
             player_discs = sum(row.count(state.player) for row in state.board)
-            opponent_discs = sum(row.count('X' if state.player == 'O' else 'O') for row in state.board)
+            opponent_discs = sum(row.count(state.opponent) for row in state.board)
             return player_discs - opponent_discs
 
         elif type == "staticWeightsEvaluation":
-            weights = [[100, -20, 10, 5, 5, 10, -20, 100],
-                    [-20, -50, -2, -2, -2, -2, -50, -20],
-                    [10, -2, -1, -1, -1, -1, -2, 10],
-                    [5, -2, -1, -1, -1, -1, -2, 5],
-                    [5, -2, -1, -1, -1, -1, -2, 5],
-                    [10, -2, -1, -1, -1, -1, -2, 10],
-                    [-20, -50, -2, -2, -2, -2, -50, -20],
-                    [100, -20, 10, 5, 5, 10, -20, 100]]
+            weights = [
+                [100, -20, 10, 5, 5, 10, -20, 100],
+                [-20, -50, -2, -2, -2, -2, -50, -20],
+                [10, -2, -1, -1, -1, -1, -2, 10],
+                [5, -2, -1, -1, -1, -1, -2, 5],
+                [5, -2, -1, -1, -1, -1, -2, 5],
+                [10, -2, -1, -1, -1, -1, -2, 10],
+                [-20, -50, -2, -2, -2, -2, -50, -20],
+                [100, -20, 10, 5, 5, 10, -20, 100]
+            ]
 
             player_score = 0
             opponent_score = 0
@@ -147,7 +150,7 @@ class MinimaxAlphaBeta:
                 for j in range(len(state.board[0])):
                     if state.board[i][j] == state.player:
                         player_score += weights[i][j]
-                    elif state.board[i][j] != '.':
+                    elif state.board[i][j] == state.opponent:
                         opponent_score += weights[i][j]
 
             return player_score - opponent_score
