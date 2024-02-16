@@ -159,6 +159,10 @@ class MinimaxAlphaBeta:
             return 
 
     def terminal_test(self, state):
+        # Check if the board is full
+        if all(cell != '.' for row in state.board for cell in row):
+            return True
+        # Check if both players have no valid moves left
         return False if state.get_possible_moves else True
 
     def solve(self):
