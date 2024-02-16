@@ -52,13 +52,40 @@ def transform_board_to_binary(board):
     global BOARD_TRANSFORMED
     BOARD_TRANSFORMED = [list(map(lambda x: 1 if x == "X" else -1 if x == "O" else 0, row)) for row in board]
 
+def make_move(board, move, player):
+    """
+    Makes a move on the board for the given player.
+    """
+    x, y, flip_directions = move
+    new_board = [row[:] for row in board]  # Create a copy of the board
+    new_board[y][x] = player
+
+    def flip_discs(board, x, y, dx, dy, player):
+        """
+        Flips discs in the given direction for the given player.
+        """
+        x += dx
+        y += dy
+
+        while 0 <= y < len(board) and 0 <= x < len(board[0]) and board[y][x] != '.' and board[y][x] != player:
+            board[y][x] = player
+            x += dx
+            y += dy
+
+    # Flipping discs in given direction
+    for dx, dy in flip_directions:
+        if dx == 0 and dy == 0:
+            continue
+        flip_discs(new_board, x, y, dx, dy, player)
+
+    return new_board
+
 
 # Helper Classes
 # ---------------------------------------------------------------------------------------------------------------------------------------
 class GameState:
-    def __init__(self, board, prev_board, player):
+    def __init__(self, board, player):
         self.board = board
-        # self.prev_board = prev_board
 
         self.player = player
         self.opponent = 'X' if player == 'O' else 'O'
@@ -74,52 +101,54 @@ class GameState:
 
     def calculate_possible_moves(self):
         possible_moves = []
-        for index_i in range(len(self.board)):
-            for index_j in range(len(self.board[0])):
-                if self.is_valid_move(index_i, index_j):
-                    possible_moves.append((index_i, index_j))
+        for index_i in range(len(self.board)):              # (y) Row index
+            for index_j in range(len(self.board[0])):       # (x) Column index
+                move_is_valid, directions = self.is_valid_move(index_j, index_i)
+
+                if move_is_valid:
+                    possible_moves.append((index_j, index_i, directions))
+
         return possible_moves
 
     def is_valid_move(self, x, y):
+        directions = []
+
         # Check if the cell is empty
-        if self.board[x][y] != '.':
-            return False
+        if self.board[y][x] != '.':
+            return False, directions
+
         # Check if placing a disc at this position will flip any opponent's discs
         for dx in [-1, 0, 1]:
             for dy in [-1, 0, 1]:
                 if dx == 0 and dy == 0:
                     continue
-                if self.check_direction(x, y, dx, dy):
-                    return True
-        return False
+
+                direction_is_valid = self.check_direction(x, y, dx, dy)
+                if direction_is_valid:
+                    directions.append((dx, dy))
+
+        if directions:
+            return True, directions
+        else:
+            return False, directions
 
     def check_direction(self, x, y, dx, dy):
         # Check if placing a disc at this position will flip any opponent's discs *** in this direction ***
         x += dx
         y += dy
-        if x < 0 or x >= len(self.board) or y < 0 or y >= len(self.board[0]) or self.board[x][y] != self.opponent:
+        if y < 0 or y >= len(self.board) or x < 0 or x >= len(self.board[0]) or self.board[y][x] != self.opponent:
             return False
         x += dx
         y += dy
-        while x >= 0 and x < len(self.board) and y >= 0 and y < len(self.board[0]):
-            if self.board[x][y] == '.':
+        while y >= 0 and y < len(self.board) and x >= 0 and x < len(self.board[0]):
+            if self.board[y][x] == '.':
                 return False
-            if self.board[x][y] == self.player:
+            if self.board[y][x] == self.player:
                 return True
             x += dx
             y += dy
         return False
 
-        # self.tiles = []
-        # self.all_tiles = []
-        # self.all_moves = []
-        # self.best_move = None
-
-        # self.get_all_tiles()
-        # self.get_all_moves()
-        # self.get_best_move()
-    def get_evaluation():
-        return
 
 class MinimaxAlphaBeta:
     def __init__(self, state):
@@ -165,22 +194,16 @@ class MinimaxAlphaBeta:
         # Check if both players have no valid moves left
         return False if state.get_possible_moves else True
 
-    def solve(self):
-        # TODO: reevaluate this function
-        value = self.maximizer(self.state, float('-inf'), float('inf'), 0)
-        self.state.evaluation = value
-
-        answer = self.state.best_move, self.state.evaluation, self.state.depth, self.state.alpha, self.state.beta, self.state.evaluation - self.state.alpha, self.state.evaluation - self.state.beta, self.state.evaluation - self.state.beta / (self.state.depth + 1) if self.state.depth else 0, self.state.evaluation
-
-        return answer
-
     def maximizer(self, state, alpha, beta, depth):
         if self.terminal_test(state):
             return self.utility(state, UTILITY_TYPE)
 
         value = float('-inf')
         for move in state.get_possible_moves:
-            value = max(value, self.minimizer(move, alpha, beta, depth + 1))
+            new_board_after_move = make_move(state.board, move, state.player)
+            new_state = GameState(board=new_board_after_move, player=state.opponent)
+
+            value = max(value, self.minimizer(new_state, alpha, beta, depth + 1))
             alpha = max(alpha, value)
             if alpha >= beta:
                 break
@@ -193,17 +216,33 @@ class MinimaxAlphaBeta:
 
         value = float('inf')
         for move in state.get_possible_moves:
-            value = min(value, self.maximizer(move, alpha, beta, depth + 1))
+            new_board_after_move = make_move(state.board, move, state.player)
+            new_state = GameState(board=new_board_after_move, player=state.opponent)
+
+            value = min(value, self.maximizer(new_state, alpha, beta, depth + 1))
             beta = min(beta, value)
             if alpha >= beta:
                 break
 
         return value
 
+    def solve(self):
+        if self.state.is_maximizer:
+            value = self.maximizer(self.state, float('-inf'), float('inf'), 0)
+        else:
+            value = self.minimizer(self.state, float('-inf'), float('inf'), 0)
+            
+        return value
+
 
 # Game Playing
 # ---------------------------------------------------------------------------------------------------------------------------------------
 transform_board_to_binary(BOARD)
+
+# (Test Make Move): Recall x = column, y = row
+# print(location_mapper((2, 4)))
+# new_move = make_move(BOARD, (2, 4, [(0,1), (0, -1)]), "X")
+# print('\n'.join([' '.join(map(str, row)) for row in new_move]))
 
 state = GameState(BOARD, None, ASSIGNED_PLAYER)
 algorithm = MinimaxAlphaBeta(state)
