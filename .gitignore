@@ -1,5 +1,6 @@
 # Ignore misc files
 .DS_Store
+.vscode
 input.txt
 output.txt
 sample_input.txt
