@@ -93,7 +93,7 @@ class GameState:
         self.is_maximizer = True if player == 'X' else False
         self.is_minimizer = True if player == 'O' else False
 
-        self.alpha = -float('inf')
+        self.alpha = float('-inf')
         self.beta = float('inf')
         self.depth = 0
 
@@ -194,7 +194,7 @@ class MinimaxAlphaBeta:
         # Check if both players have no valid moves left
         return False if state.get_possible_moves else True
 
-    def maximizer(self, state, alpha, beta, depth):
+    def maximizer(self, state):
         if self.terminal_test(state):
             return self.utility(state, UTILITY_TYPE), None
 
@@ -204,17 +204,17 @@ class MinimaxAlphaBeta:
             new_board_after_move = make_move(state.board, move, state.player)
             new_state = GameState(board=new_board_after_move, player=state.opponent)
 
-            value, _ = self.minimizer(new_state, alpha, beta, depth + 1)
+            value, _ = self.minimizer(new_state)
             if value > best_value:
                 best_value, best_move = value, move
 
-            alpha = max(alpha, value)
-            if alpha >= beta:
+            state.alpha = max(state.alpha, value)
+            if state.alpha >= state.beta:
                 break
 
         return value
 
-    def minimizer(self, state, alpha, beta, depth):
+    def minimizer(self, state):
         if self.terminal_test(state):
             return self.utility(state, UTILITY_TYPE), None
 
@@ -224,21 +224,21 @@ class MinimaxAlphaBeta:
             new_board_after_move = make_move(state.board, move, state.player)
             new_state = GameState(board=new_board_after_move, player=state.opponent)
 
-            value, _ = self.minimizer(new_state, alpha, beta, depth + 1)
+            value, _ = self.minimizer(new_state)
             if value < best_value:
                 best_value, best_move = value, move
 
-            beta = min(beta, value)
-            if alpha >= beta:
+            state.beta = min(state.beta, value)
+            if state.alpha >= state.beta:
                 break
 
         return value
 
     def solve(self):
         if self.state.is_maximizer:
-            value, best_move = self.maximizer(self.state, float('-inf'), float('inf'), 0)
+            value, best_move = self.maximizer(self.state)
         else:
-            value, best_move = self.minimizer(self.state, float('-inf'), float('inf'), 0)
+            value, best_move = self.minimizer(self.state)
             
         return location_mapper((best_move[0], best_move[1]))
 
@@ -252,7 +252,7 @@ transform_board_to_binary(BOARD)
 # new_move = make_move(BOARD, (2, 4, [(0,1), (0, -1)]), "X")
 # print('\n'.join([' '.join(map(str, row)) for row in new_move]))
 
-state = GameState(BOARD, None, ASSIGNED_PLAYER)
+state = GameState(BOARD, ASSIGNED_PLAYER)
 algorithm = MinimaxAlphaBeta(state)
 
 result = algorithm.solve()
