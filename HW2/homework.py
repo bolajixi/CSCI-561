@@ -196,14 +196,18 @@ class MinimaxAlphaBeta:
 
     def maximizer(self, state, alpha, beta, depth):
         if self.terminal_test(state):
-            return self.utility(state, UTILITY_TYPE)
+            return self.utility(state, UTILITY_TYPE), None
 
-        value = float('-inf')
+        best_value, best_move = float('-inf'), None
+
         for move in state.get_possible_moves:
             new_board_after_move = make_move(state.board, move, state.player)
             new_state = GameState(board=new_board_after_move, player=state.opponent)
 
-            value = max(value, self.minimizer(new_state, alpha, beta, depth + 1))
+            value, _ = self.minimizer(new_state, alpha, beta, depth + 1)
+            if value > best_value:
+                best_value, best_move = value, move
+
             alpha = max(alpha, value)
             if alpha >= beta:
                 break
@@ -212,14 +216,18 @@ class MinimaxAlphaBeta:
 
     def minimizer(self, state, alpha, beta, depth):
         if self.terminal_test(state):
-            return self.utility(state, UTILITY_TYPE)
+            return self.utility(state, UTILITY_TYPE), None
 
-        value = float('inf')
+        best_value, best_move = float('inf'), None
+        
         for move in state.get_possible_moves:
             new_board_after_move = make_move(state.board, move, state.player)
             new_state = GameState(board=new_board_after_move, player=state.opponent)
 
-            value = min(value, self.maximizer(new_state, alpha, beta, depth + 1))
+            value, _ = self.minimizer(new_state, alpha, beta, depth + 1)
+            if value < best_value:
+                best_value, best_move = value, move
+
             beta = min(beta, value)
             if alpha >= beta:
                 break
@@ -228,11 +236,11 @@ class MinimaxAlphaBeta:
 
     def solve(self):
         if self.state.is_maximizer:
-            value = self.maximizer(self.state, float('-inf'), float('inf'), 0)
+            value, best_move = self.maximizer(self.state, float('-inf'), float('inf'), 0)
         else:
-            value = self.minimizer(self.state, float('-inf'), float('inf'), 0)
+            value, best_move = self.minimizer(self.state, float('-inf'), float('inf'), 0)
             
-        return value
+        return location_mapper((best_move[0], best_move[1]))
 
 
 # Game Playing
