@@ -2,6 +2,7 @@
 # ---------------------------------------------------------------------------------------------------------------------------------------
 import os
 import time
+from evaluator import UtilityEvaluator
 
 start_time = time.time()
 
@@ -13,7 +14,6 @@ FILE_WRITE_FORMAT = "w"
 BOARD = []
 X_GRID_SIZE, Y_GRID_SIZE = 12, 12
 result = ""
-UTILITY_TYPE = "staticWeightsEvaluation"
 
 
 # Preprocessing
@@ -165,38 +165,15 @@ class MinimaxAlphaBeta:
     def __init__(self, state):
         self.state = state
 
-    def utility(self, state, type):
-        if type == "discDifference":
-            player_discs = sum(row.count(state.player) for row in state.board)
-            opponent_discs = sum(row.count(state.opponent) for row in state.board)
-            return player_discs - opponent_discs
+    def utility(self, state):
+        evaluate = UtilityEvaluator(state)
 
-        elif type == "staticWeightsEvaluation":
-            weights = [
-                [100, -20, 10, 5, 5, 10, -20, 100],
-                [-20, -50, -2, -2, -2, -2, -50, -20],
-                [10, -2, -1, -1, -1, -1, -2, 10],
-                [5, -2, -1, -1, -1, -1, -2, 5],
-                [5, -2, -1, -1, -1, -1, -2, 5],
-                [10, -2, -1, -1, -1, -1, -2, 10],
-                [-20, -50, -2, -2, -2, -2, -50, -20],
-                [100, -20, 10, 5, 5, 10, -20, 100]
-            ]
-
-            player_score = 0
-            opponent_score = 0
-
-            for i in range(len(state.board)):
-                for j in range(len(state.board[0])):
-                    if state.board[i][j] == state.player:
-                        player_score += weights[i][j]
-                    elif state.board[i][j] == state.opponent:
-                        opponent_score += weights[i][j]
-
-            return player_score - opponent_score
-
-        elif type == "cornerCapture":
-            return 
+        if state.phase == "early":
+            return evaluate.cornerCapture() + evaluate.mobility()
+        elif state.phase == "mid":
+            return evaluate.cornerCapture() + evaluate.mobility() + evaluate.discDifference()
+        elif state.phase == "late":
+            return evaluate.cornerCapture() + evaluate.mobility() + evaluate.discDifference() + evaluate.stability()
 
     def terminal_test(self, state):
         # Check if the board is full
@@ -207,7 +184,7 @@ class MinimaxAlphaBeta:
 
     def maximizer(self, state):
         if self.terminal_test(state):
-            return self.utility(state, UTILITY_TYPE), None
+            return self.utility(state), None
 
         best_value, best_move = float('-inf'), None
 
@@ -227,7 +204,7 @@ class MinimaxAlphaBeta:
 
     def minimizer(self, state):
         if self.terminal_test(state):
-            return self.utility(state, UTILITY_TYPE), None
+            return self.utility(state), None
 
         best_value, best_move = float('inf'), None
         
