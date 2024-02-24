@@ -13,7 +13,7 @@ FILE_WRITE_FORMAT = "w"
 
 BOARD = []
 X_GRID_SIZE, Y_GRID_SIZE = 12, 12
-MAX_DEPTH = 5      # Optimize for better depth limited search
+MAX_DEPTH = 4      # Optimize for better depth limited search
 result = ""
 
 
@@ -48,10 +48,6 @@ elif Y_GRID_SIZE != len(BOARD):
 def location_mapper(location):
     x, y = location
     return chr(x + 97) + str(y + 1)
-
-def transform_board_to_binary(board):
-    global BOARD_TRANSFORMED
-    BOARD_TRANSFORMED = [list(map(lambda x: 1 if x == "X" else -1 if x == "O" else 0, row)) for row in board]
 
 def make_move(board, move, player):
     """
@@ -236,13 +232,6 @@ class MinimaxAlphaBeta:
 
 # Game Playing
 # ---------------------------------------------------------------------------------------------------------------------------------------
-transform_board_to_binary(BOARD)
-
-# (Test Make Move): Recall x = column, y = row
-# print(location_mapper((2, 4)))
-# new_move = make_move(BOARD, (2, 4, [(0,1), (0, -1)]), "X")
-# print('\n'.join([' '.join(map(str, row)) for row in new_move]))
-
 state = GameState(BOARD, ASSIGNED_PLAYER)
 algorithm = MinimaxAlphaBeta(state)
 
