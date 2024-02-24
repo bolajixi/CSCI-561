@@ -13,6 +13,7 @@ FILE_WRITE_FORMAT = "w"
 
 BOARD = []
 X_GRID_SIZE, Y_GRID_SIZE = 12, 12
+MAX_DEPTH = 11      # Optimize for better depth limited search
 result = ""
 
 
@@ -96,7 +97,6 @@ class GameState:
 
         self.alpha = float('-inf')
         self.beta = float('inf')
-        self.depth = 0
 
         self.get_possible_moves = self.calculate_possible_moves()
 
@@ -182,8 +182,8 @@ class MinimaxAlphaBeta:
         # Check if both players have no valid moves left
         return False if state.get_possible_moves else True
 
-    def maximizer(self, state):
-        if self.terminal_test(state):
+    def maximizer(self, state, depth):
+        if depth == 0 or self.terminal_test(state):
             return self.utility(state), None
 
         best_value, best_move = float('-inf'), None
@@ -192,7 +192,7 @@ class MinimaxAlphaBeta:
             new_board_after_move = make_move(state.board, move, state.player)
             new_state = GameState(board=new_board_after_move, player=state.opponent)
 
-            value, _ = self.minimizer(new_state)
+            value, _ = self.minimizer(new_state, depth - 1)
             if value > best_value:
                 best_value, best_move = value, move
 
@@ -202,8 +202,8 @@ class MinimaxAlphaBeta:
 
         return best_value, best_move
 
-    def minimizer(self, state):
-        if self.terminal_test(state):
+    def minimizer(self, state, depth):
+        if depth == 0 or self.terminal_test(state):
             return self.utility(state), None
 
         best_value, best_move = float('inf'), None
@@ -212,7 +212,7 @@ class MinimaxAlphaBeta:
             new_board_after_move = make_move(state.board, move, state.player)
             new_state = GameState(board=new_board_after_move, player=state.opponent)
 
-            value, _ = self.minimizer(new_state)
+            value, _ = self.minimizer(new_state, depth - 1)
             if value < best_value:
                 best_value, best_move = value, move
 
@@ -224,9 +224,9 @@ class MinimaxAlphaBeta:
 
     def solve(self):
         if self.state.is_maximizer:
-            value, best_move = self.maximizer(self.state)
+            value, best_move = self.maximizer(self.state, MAX_DEPTH)
         else:
-            value, best_move = self.minimizer(self.state)
+            value, best_move = self.minimizer(self.state, MAX_DEPTH)
             
         return location_mapper((best_move[0], best_move[1]))
 
