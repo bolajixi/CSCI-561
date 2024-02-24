@@ -87,7 +87,6 @@ def make_move(board, move, player):
 class GameState:
     def __init__(self, board, player):
         self.board = board
-        self.phase = self.detect_phase()
 
         self.player = player
         self.opponent = 'X' if player == 'O' else 'O'
@@ -99,6 +98,7 @@ class GameState:
         self.beta = float('inf')
 
         self.get_possible_moves = self.calculate_possible_moves()
+        self.phase = self.detect_phase()
 
     def calculate_possible_moves(self):
         possible_moves = []

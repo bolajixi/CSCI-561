@@ -58,12 +58,13 @@ class UtilityEvaluator:
         Returns the number of spaces adjacent to opponent pieces minus the
         the number of spaces adjacent to the current player's pieces.
         '''
-        corner_grab = 0
-        for i in range(len(self.state.board)):
-            for j in range(len(self.state.board[0])):
-                if self.state.board[i][j] == self.state.player and (i == 0 or i == 11 or j == 0 or j == 11):
-                    corner_grab += 1
-        return corner_grab
+        corners = [(0, 0), (0, 11), (11, 0), (11, 11)]
+
+        for move in self.state.get_possible_moves(self.state.player):
+            if move[:2] in corners:
+                return 1
+
+        return 0
 
 
         # elif type == "staticWeightsEvaluation":
