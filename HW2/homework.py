@@ -12,7 +12,7 @@ FILE_WRITE_FORMAT = "w"
 
 BOARD = []
 X_GRID_SIZE, Y_GRID_SIZE = 12, 12
-MAX_DEPTH = 4      # Optimize for better depth limited search
+MAX_DEPTH = 3      # Optimize for better depth limited search
 result = ""
 
 
