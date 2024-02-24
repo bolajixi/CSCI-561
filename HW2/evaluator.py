@@ -65,28 +65,3 @@ class UtilityEvaluator:
                 return 1
 
         return 0
-
-
-        # elif type == "staticWeightsEvaluation":
-        #     weights = [
-        #         [100, -20, 10, 5, 5, 10, -20, 100],
-        #         [-20, -50, -2, -2, -2, -2, -50, -20],
-        #         [10, -2, -1, -1, -1, -1, -2, 10],
-        #         [5, -2, -1, -1, -1, -1, -2, 5],
-        #         [5, -2, -1, -1, -1, -1, -2, 5],
-        #         [10, -2, -1, -1, -1, -1, -2, 10],
-        #         [-20, -50, -2, -2, -2, -2, -50, -20],
-        #         [100, -20, 10, 5, 5, 10, -20, 100]
-        #     ]
-
-        #     player_score = 0
-        #     opponent_score = 0
-
-        #     for i in range(len(state.board)):
-        #         for j in range(len(state.board[0])):
-        #             if state.board[i][j] == state.player:
-        #                 player_score += weights[i][j]
-        #             elif state.board[i][j] == state.opponent:
-        #                 opponent_score += weights[i][j]
-
-        #     return player_score - opponent_score

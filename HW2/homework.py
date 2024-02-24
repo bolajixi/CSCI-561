@@ -169,11 +169,11 @@ class MinimaxAlphaBeta:
         evaluate = UtilityEvaluator(state)
 
         if state.phase == "early":
-            return evaluate.cornerCapture() + evaluate.mobility()
+            return 1000*evaluate.cornerCapture() + 50*evaluate.mobility()
         elif state.phase == "mid":
-            return evaluate.cornerCapture() + evaluate.mobility() + evaluate.discDifference()
+            return 1000*evaluate.cornerCapture() + 20*evaluate.mobility() + 10*evaluate.discDifference() + 10*evaluate.stability()
         elif state.phase == "late":
-            return evaluate.cornerCapture() + evaluate.mobility() + evaluate.discDifference() + evaluate.stability()
+            return 1000*evaluate.cornerCapture() + 100*evaluate.mobility() + 500*evaluate.discDifference() + 50*evaluate.stability()
 
     def terminal_test(self, state):
         # Check if the board is full
