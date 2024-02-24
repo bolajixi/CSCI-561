@@ -13,7 +13,7 @@ FILE_WRITE_FORMAT = "w"
 
 BOARD = []
 X_GRID_SIZE, Y_GRID_SIZE = 12, 12
-MAX_DEPTH = 11      # Optimize for better depth limited search
+MAX_DEPTH = 5      # Optimize for better depth limited search
 result = ""
 
 
@@ -97,21 +97,23 @@ class GameState:
         self.alpha = float('-inf')
         self.beta = float('inf')
 
-        self.get_possible_moves = self.calculate_possible_moves()
         self.phase = self.detect_phase()
 
-    def calculate_possible_moves(self):
+    def get_possible_moves(self, player):
+        return self.calculate_possible_moves(player)
+
+    def calculate_possible_moves(self, player):
         possible_moves = []
         for index_i in range(len(self.board)):              # (y) Row index
             for index_j in range(len(self.board[0])):       # (x) Column index
-                move_is_valid, directions = self.is_valid_move(index_j, index_i)
+                move_is_valid, directions = self.is_valid_move(index_j, index_i, player)
 
                 if move_is_valid:
                     possible_moves.append((index_j, index_i, directions))
 
         return possible_moves
 
-    def is_valid_move(self, x, y):
+    def is_valid_move(self, x, y, player):
         directions = []
 
         # Check if the cell is empty
@@ -124,7 +126,7 @@ class GameState:
                 if dx == 0 and dy == 0:
                     continue
 
-                direction_is_valid = self.check_direction(x, y, dx, dy)
+                direction_is_valid = self.check_direction(x, y, dx, dy, player)
                 if direction_is_valid:
                     directions.append((dx, dy))
 
@@ -133,18 +135,19 @@ class GameState:
         else:
             return False, directions
 
-    def check_direction(self, x, y, dx, dy):
+    def check_direction(self, x, y, dx, dy, player):
+        opponent = 'X' if player == 'O' else 'O'
         # Check if placing a disc at this position will flip any opponent's discs *** in this direction ***
         x += dx
         y += dy
-        if y < 0 or y >= len(self.board) or x < 0 or x >= len(self.board[0]) or self.board[y][x] != self.opponent:
+        if y < 0 or y >= len(self.board) or x < 0 or x >= len(self.board[0]) or self.board[y][x] != opponent:
             return False
         x += dx
         y += dy
         while y >= 0 and y < len(self.board) and x >= 0 and x < len(self.board[0]):
             if self.board[y][x] == '.':
                 return False
-            if self.board[y][x] == self.player:
+            if self.board[y][x] == player:
                 return True
             x += dx
             y += dy
@@ -180,7 +183,7 @@ class MinimaxAlphaBeta:
         if all(cell != '.' for row in state.board for cell in row):
             return True
         # Check if both players have no valid moves left
-        return False if state.get_possible_moves else True
+        return False if state.get_possible_moves(state.player) else True
 
     def maximizer(self, state, depth):
         if depth == 0 or self.terminal_test(state):
@@ -188,7 +191,7 @@ class MinimaxAlphaBeta:
 
         best_value, best_move = float('-inf'), None
 
-        for move in state.get_possible_moves:
+        for move in state.get_possible_moves(state.player):
             new_board_after_move = make_move(state.board, move, state.player)
             new_state = GameState(board=new_board_after_move, player=state.opponent)
 
@@ -208,7 +211,7 @@ class MinimaxAlphaBeta:
 
         best_value, best_move = float('inf'), None
         
-        for move in state.get_possible_moves:
+        for move in state.get_possible_moves(state.player):
             new_board_after_move = make_move(state.board, move, state.player)
             new_state = GameState(board=new_board_after_move, player=state.opponent)
 
@@ -246,7 +249,7 @@ algorithm = MinimaxAlphaBeta(state)
 result = algorithm.solve()
 
 elapsed_time = time.time() - start_time
-print(f"\nElapsed Time = {'%.2f' % round(elapsed_time, 2)} seconds \n\n{result}")
+print(f"\n{result} \n\nElapsed Time = {'%.2f' % round(elapsed_time, 2)} seconds")
 
 with open(OUTPUT_FILE, FILE_WRITE_FORMAT) as output_file:
     output_file.write(result + "\n")
