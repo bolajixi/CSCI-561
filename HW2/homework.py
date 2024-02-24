@@ -86,6 +86,7 @@ def make_move(board, move, player):
 class GameState:
     def __init__(self, board, player):
         self.board = board
+        self.phase = self.detect_phase()
 
         self.player = player
         self.opponent = 'X' if player == 'O' else 'O'
@@ -148,6 +149,16 @@ class GameState:
             x += dx
             y += dy
         return False
+
+    def detect_phase(self):
+        total_pieces = sum(row.count(self.player) + row.count(self.opponent) for row in self.board)
+
+        if total_pieces < 30:       # Adjusted threshold (20)
+            return "early"
+        elif total_pieces < 80:     # Adjusted threshold (50)
+            return "mid"
+        else:
+            return "late"
 
 
 class MinimaxAlphaBeta:
@@ -212,7 +223,7 @@ class MinimaxAlphaBeta:
             if state.alpha >= state.beta:
                 break
 
-        return value
+        return best_value, best_move
 
     def minimizer(self, state):
         if self.terminal_test(state):
@@ -232,7 +243,7 @@ class MinimaxAlphaBeta:
             if state.alpha >= state.beta:
                 break
 
-        return value
+        return best_value, best_move
 
     def solve(self):
         if self.state.is_maximizer:
