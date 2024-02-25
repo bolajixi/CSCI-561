@@ -224,6 +224,18 @@ class UtilityEvaluator:
 
         return 0
 
+    def cornerOccupancy(self):
+        corners = [(0, 0), (0, 11), (11, 0), (11, 11)]
+        player_corners = sum(1 for corner in corners if self.state.board[corner[1]][corner[0]] == self.state.player)
+        opponent_corners = sum(1 for corner in corners if self.state.board[corner[1]][corner[0]] == self.state.opponent)
+        return 100 * (player_corners - opponent_corners) / (player_corners + opponent_corners + 1)
+
+    def edgeControl(self):
+        edges = [(0, j) for j in range(12)] + [(11, j) for j in range(12)] + [(i, 0) for i in range(1, 11)] + [(i, 11) for i in range(1, 11)]
+        player_edges = sum(1 for edge in edges if self.state.board[edge[1]][edge[0]] == self.state.player)
+        opponent_edges = sum(1 for edge in edges if self.state.board[edge[1]][edge[0]] == self.state.opponent)
+        return 100 * (player_edges - opponent_edges) / (player_edges + opponent_edges + 1)
+
 class MinimaxAlphaBeta:
     def __init__(self, state):
         self.state = state
@@ -236,7 +248,8 @@ class MinimaxAlphaBeta:
         elif state.phase == "mid":
             return 1000*evaluate.cornerCapture() + 20*evaluate.mobility() + 10*evaluate.discDifference() + 10*evaluate.stability()
         elif state.phase == "late":
-            return 1000*evaluate.cornerCapture() + 100*evaluate.mobility() + 500*evaluate.discDifference() + 50*evaluate.stability()
+            return 1000*evaluate.cornerCapture() + 100*evaluate.mobility() + 500*evaluate.discDifference() + 50*evaluate.stability() \
+                + 50*evaluate.edgeControl() + 50*evaluate.cornerOccupancy()
 
     def terminal_test(self, state):
         # Check if the board is full
