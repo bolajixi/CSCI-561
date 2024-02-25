@@ -23,7 +23,7 @@ DIRECTION_MAP = {
     7: (-1, 1)      # Top-Left
 }
 
-MAX_DEPTH = 4      # Optimize for better depth limited search
+MAX_DEPTH = 3      # Optimize for better depth limited search
 result = ""
 
 
