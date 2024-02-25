@@ -5,13 +5,24 @@ import time
 
 start_time = time.time()
 
-global ASSIGNED_PLAYER, UTILITY_TYPE
+global ASSIGNED_PLAYER, UTILITY_TYPE, DIRECTION_MAP
 INPUT_FILE = "input.txt"
 OUTPUT_FILE = "output.txt"
 FILE_WRITE_FORMAT = "w"
 
 BOARD = []
 X_GRID_SIZE, Y_GRID_SIZE = 12, 12
+DIRECTION_MAP = {
+    0: (0, 1),      # Top
+    1: (1, 1),      # Top-Right
+    2: (1, 0),      # Right
+    3: (1, -1),     # Bottom-Right
+    4: (0, -1),     # Bottom
+    5: (-1, -1),    # Bottom-left
+    6: (-1, 0),     # Left
+    7: (-1, 1)      # Top-Left
+}
+
 MAX_DEPTH = 3      # Optimize for better depth limited search
 result = ""
 
@@ -69,9 +80,9 @@ def make_move(board, move, player):
             y += dy
 
     # Flipping discs in given direction
-    for dx, dy in flip_directions:
-        if dx == 0 and dy == 0:
-            continue
+    for direction_index in flip_directions:
+        dx, dy = DIRECTION_MAP[direction_index]
+
         flip_discs(new_board, x, y, dx, dy, player)
 
     return new_board
@@ -116,14 +127,12 @@ class GameState:
             return False, directions
 
         # Check if placing a disc at this position will flip any opponent's discs
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
-                if dx == 0 and dy == 0:
-                    continue
+        for direction_index in DIRECTION_MAP:
+            dx, dy = DIRECTION_MAP[direction_index]
+            direction_is_valid = self.check_direction(x, y, dx, dy, player)
 
-                direction_is_valid = self.check_direction(x, y, dx, dy, player)
-                if direction_is_valid:
-                    directions.append((dx, dy))
+            if direction_is_valid:
+                directions.append(direction_index)
 
         if directions:
             return True, directions
@@ -236,7 +245,7 @@ class UtilityEvaluator:
         opponent_edges = sum(1 for edge in edges if self.state.board[edge[1]][edge[0]] == self.state.opponent)
         return 100 * (player_edges - opponent_edges) / (player_edges + opponent_edges + 1)
 
-class MinimaxAlphaBeta:
+class GameAgent:
     def __init__(self, state):
         self.state = state
 
@@ -244,11 +253,11 @@ class MinimaxAlphaBeta:
         evaluate = UtilityEvaluator(state)
 
         if state.phase == "early":
-            return 1000*evaluate.cornerCapture() + 50*evaluate.mobility()
+            return 1000*evaluate.cornerCapture() + 400*evaluate.stability() + 50*evaluate.mobility()
         elif state.phase == "mid":
-            return 1000*evaluate.cornerCapture() + 20*evaluate.mobility() + 10*evaluate.discDifference() + 10*evaluate.stability()
+            return 1000*evaluate.cornerCapture() + 400*evaluate.stability() + 20*evaluate.mobility() + 100*evaluate.discDifference()
         elif state.phase == "late":
-            return 1000*evaluate.cornerCapture() + 100*evaluate.mobility() + 500*evaluate.discDifference() + 50*evaluate.stability() \
+            return 1000*evaluate.cornerCapture() + 400*evaluate.stability() + 100*evaluate.mobility() + 500*evaluate.discDifference() \
                 + 50*evaluate.edgeControl() + 50*evaluate.cornerOccupancy()
 
     def terminal_test(self, state):
@@ -298,11 +307,40 @@ class MinimaxAlphaBeta:
 
         return best_value, best_move
 
-    def solve(self):
-        if self.state.is_maximizer:
-            value, best_move = self.maximizer(self.state, MAX_DEPTH)
-        else:
-            value, best_move = self.minimizer(self.state, MAX_DEPTH)
+    def negamax(self, state, depth):
+        if depth == 0 or self.terminal_test(state):
+            return self.utility(state), None
+
+        best_value, best_move = float('-inf'), None
+
+        for move in state.get_possible_moves(state.player):
+            new_board_after_move = make_move(state.board, move, state.player)
+            new_state = GameState(board=new_board_after_move, player=state.opponent)
+
+            # Negate alpha and beta before passing to the recursive call
+            new_state.alpha = -state.beta
+            new_state.beta = -state.alpha
+
+            value, _ = self.negamax(new_state, depth - 1)
+            value = -value
+
+            if value > best_value:
+                best_value, best_move = value, move
+
+            state.alpha = max(state.alpha, value)
+            if state.alpha >= state.beta:
+                break
+
+        return best_value, best_move
+
+    def solve(self, algorithm_type):
+        if algorithm_type == 'minimax':    
+            if self.state.is_maximizer:
+                value, best_move = self.maximizer(self.state, MAX_DEPTH)
+            else:
+                value, best_move = self.minimizer(self.state, MAX_DEPTH)
+        elif algorithm_type == 'negamax':
+            value, best_move = self.negamax(self.state, MAX_DEPTH)
             
         return location_mapper((best_move[0], best_move[1]))
 
@@ -310,9 +348,9 @@ class MinimaxAlphaBeta:
 # Game Playing
 # ---------------------------------------------------------------------------------------------------------------------------------------
 state = GameState(BOARD, ASSIGNED_PLAYER)
-algorithm = MinimaxAlphaBeta(state)
+agent = GameAgent(state)
 
-result = algorithm.solve()
+result = agent.solve('minimax')
 
 elapsed_time = time.time() - start_time
 print(f"\n{result} \n\nElapsed Time = {'%.2f' % round(elapsed_time, 2)} seconds")
