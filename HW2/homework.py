@@ -23,7 +23,7 @@ DIRECTION_MAP = {
     7: (-1, 1)      # Top-Left
 }
 
-MAX_DEPTH = 3      # Optimize for better depth limited search
+MAX_DEPTH = 4      # Optimize for better depth limited search
 result = ""
 
 
@@ -350,7 +350,7 @@ class GameAgent:
 state = GameState(BOARD, ASSIGNED_PLAYER)
 agent = GameAgent(state)
 
-result = agent.solve('minimax')
+result = agent.solve('negamax')
 
 elapsed_time = time.time() - start_time
 print(f"\n{result} \n\nElapsed Time = {'%.2f' % round(elapsed_time, 2)} seconds")
