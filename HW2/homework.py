@@ -367,8 +367,8 @@ result = agent.solve('negamax')
 elapsed_time = time.time() - start_time
 print(f"\n{result} \n\nElapsed Time = {'%.2f' % round(elapsed_time, 2)} seconds")
 
-with open(GAME_PLAY_DATA, FILE_WRITE_FORMAT) as game_play_file:
-    game_play_file.write(json.dumps(HASHED_STATES))
+with open(GAME_PLAY_DATA, FILE_WRITE_FORMAT) as game_play_data_file:
+    json.dump(HASHED_STATES, game_play_data_file)
 
 with open(OUTPUT_FILE, FILE_WRITE_FORMAT) as output_file:
     output_file.write(result + "\n")
