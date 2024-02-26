@@ -41,8 +41,11 @@ if output_file_exists:
 if game_play_data_exists:
     print(f"Loading game play data from '{GAME_PLAY_DATA}' file")
 
-    with open(GAME_PLAY_DATA, "r") as game_play_data_file:
-        HASHED_STATES = json.load(game_play_data_file)
+    try:
+        with open(GAME_PLAY_DATA, "r") as game_play_data_file:
+            HASHED_STATES = json.load(game_play_data_file)
+    except json.JSONDecodeError as e:
+        print(f"*** Skipping game play data load *** (Reason: Error decoding JSON)")
 
 with open(INPUT_FILE, "r") as input_file:
     ASSIGNED_PLAYER = input_file.readline().strip() # Color X: Black, Color O: White
