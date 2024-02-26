@@ -2,10 +2,11 @@
 # ---------------------------------------------------------------------------------------------------------------------------------------
 import os
 import time
+import json
 
 start_time = time.time()
 
-global ASSIGNED_PLAYER, UTILITY_TYPE, DIRECTION_MAP
+global ASSIGNED_PLAYER, DIRECTION_MAP, HASHED_STATES
 INPUT_FILE = "input.txt"
 OUTPUT_FILE = "output.txt"
 GAME_PLAY_DATA = "playdata.txt"
@@ -14,18 +15,18 @@ FILE_WRITE_FORMAT = "w"
 BOARD = []
 X_GRID_SIZE, Y_GRID_SIZE = 12, 12
 DIRECTION_MAP = {
-    0: (0, 1),      # Top
-    1: (1, 1),      # Top-Right
-    2: (1, 0),      # Right
-    3: (1, -1),     # Bottom-Right
-    4: (0, -1),     # Bottom
-    5: (-1, -1),    # Bottom-left
-    6: (-1, 0),     # Left
-    7: (-1, 1)      # Top-Left
+    0: (0, 1),          # Top
+    1: (1, 1),          # Top-Right
+    2: (1, 0),          # Right
+    3: (1, -1),         # Bottom-Right
+    4: (0, -1),         # Bottom
+    5: (-1, -1),        # Bottom-left
+    6: (-1, 0),         # Left
+    7: (-1, 1)          # Top-Left
 }
 
-MAX_DEPTH = 3      # Optimize for better depth limited search
-result = ""
+MAX_DEPTH = 3           # Optimize for better depth limited search
+HASHED_STATES = {}      # Transposition table using Zobrist hashing
 
 
 # Preprocessing
@@ -39,6 +40,9 @@ if output_file_exists:
 
 if game_play_data_exists:
     print(f"Loading game play data from '{GAME_PLAY_DATA}' file")
+
+    with open(GAME_PLAY_DATA, "r") as game_play_data_file:
+        HASHED_STATES = json.load(game_play_data_file)
 
 with open(INPUT_FILE, "r") as input_file:
     ASSIGNED_PLAYER = input_file.readline().strip() # Color X: Black, Color O: White
@@ -361,7 +365,7 @@ elapsed_time = time.time() - start_time
 print(f"\n{result} \n\nElapsed Time = {'%.2f' % round(elapsed_time, 2)} seconds")
 
 with open(GAME_PLAY_DATA, FILE_WRITE_FORMAT) as game_play_file:
-    game_play_file.write("trans table \n")
+    game_play_file.write(json.dumps(HASHED_STATES))
 
 with open(OUTPUT_FILE, FILE_WRITE_FORMAT) as output_file:
     output_file.write(result + "\n")
