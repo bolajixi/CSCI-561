@@ -8,6 +8,7 @@ start_time = time.time()
 global ASSIGNED_PLAYER, UTILITY_TYPE, DIRECTION_MAP
 INPUT_FILE = "input.txt"
 OUTPUT_FILE = "output.txt"
+GAME_PLAY_DATA = "playdata.txt"
 FILE_WRITE_FORMAT = "w"
 
 BOARD = []
@@ -30,10 +31,14 @@ result = ""
 # Preprocessing
 # ---------------------------------------------------------------------------------------------------------------------------------------
 output_file_exists = os.path.isfile(OUTPUT_FILE)
+game_play_data_exists = os.path.isfile(GAME_PLAY_DATA)
 
 if output_file_exists:
     os.remove(OUTPUT_FILE)
     print(f"Removed '{OUTPUT_FILE}' file")
+
+if game_play_data_exists:
+    print(f"Loading game play data from '{GAME_PLAY_DATA}' file")
 
 with open(INPUT_FILE, "r") as input_file:
     ASSIGNED_PLAYER = input_file.readline().strip() # Color X: Black, Color O: White
@@ -354,6 +359,9 @@ result = agent.solve('negamax')
 
 elapsed_time = time.time() - start_time
 print(f"\n{result} \n\nElapsed Time = {'%.2f' % round(elapsed_time, 2)} seconds")
+
+with open(GAME_PLAY_DATA, FILE_WRITE_FORMAT) as game_play_file:
+    game_play_file.write("trans table \n")
 
 with open(OUTPUT_FILE, FILE_WRITE_FORMAT) as output_file:
     output_file.write(result + "\n")
