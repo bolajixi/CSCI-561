@@ -45,17 +45,17 @@ if game_play_data_exists:
         with open(GAME_PLAY_DATA, "r") as game_play_data_file:
             HASHED_STATES = json.load(game_play_data_file)
     except json.JSONDecodeError as e:
-        print(f"*** Skipping game play data load *** (Reason: Error decoding JSON)")
+        print(f"*** Skip loading game play data *** (Reason: Error decoding JSON)")
 
 with open(INPUT_FILE, "r") as input_file:
     ASSIGNED_PLAYER = input_file.readline().strip() # Color X: Black, Color O: White
     GAME_PLAYTIME = input_file.readline().strip()
-    STARTING_GAME_STATE = input_file.readlines()
+    GAME_STATE = input_file.readlines()
 
     p1_time, p2_time = GAME_PLAYTIME.split()
     p1_time, p2_time = float(p1_time), float(p2_time)
 
-    for row_string in STARTING_GAME_STATE:
+    for row_string in GAME_STATE:
         row = [cell for cell in row_string.strip()]
         BOARD.append(row)
 

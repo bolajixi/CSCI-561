@@ -3,6 +3,7 @@
 .vscode
 input.txt
 output.txt
+playdata.txt
 sample_input.txt
 
 # Ignore testcase folders
