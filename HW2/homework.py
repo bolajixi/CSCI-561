@@ -71,6 +71,10 @@ def location_mapper(location):
     x, y = location
     return chr(x + 97) + str(y + 1)
 
+def zobrist_hash(board):
+    # Implement Zobrist hashing to generate a unique key for the given board state
+    pass
+
 def make_move(board, move, player):
     """
     Makes a move on the board for the given player.
@@ -323,6 +327,11 @@ class GameAgent:
         if depth == 0 or self.terminal_test(state):
             return self.utility(state), None
 
+        board_state_hash = zobrist_hash(state.board)
+
+        if board_state_hash in HASHED_STATES and HASHED_STATES[board_state_hash]['depth'] >= depth:
+            return HASHED_STATES[board_state_hash]['value'], HASHED_STATES[board_state_hash]['move']
+
         best_value, best_move = float('-inf'), None
 
         for move in state.get_possible_moves(state.player):
@@ -343,6 +352,7 @@ class GameAgent:
             if state.alpha >= state.beta:
                 break
 
+        HASHED_STATES[board_state_hash] = {'value': best_value, 'move': best_move, 'depth': depth}
         return best_value, best_move
 
     def solve(self, algorithm_type):
@@ -353,6 +363,8 @@ class GameAgent:
                 value, best_move = self.minimizer(self.state, MAX_DEPTH)
         elif algorithm_type == 'negamax':
             value, best_move = self.negamax(self.state, MAX_DEPTH)
+        elif algorithm_type == 'negascout':
+            value, best_move = self.negamax(self.state, MAX_DEPTH)
             
         return location_mapper((best_move[0], best_move[1]))
 
@@ -362,7 +374,7 @@ class GameAgent:
 state = GameState(BOARD, ASSIGNED_PLAYER)
 agent = GameAgent(state)
 
-result = agent.solve('negamax')
+result = agent.solve('negascout')
 
 elapsed_time = time.time() - start_time
 print(f"\n{result} \n\nElapsed Time = {'%.2f' % round(elapsed_time, 2)} seconds")
