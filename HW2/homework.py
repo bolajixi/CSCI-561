@@ -261,6 +261,9 @@ class UtilityEvaluator:
         opponent_edges = sum(1 for edge in edges if self.state.board[edge[1]][edge[0]] == self.state.opponent)
         return 100 * (player_edges - opponent_edges) / (player_edges + opponent_edges + 1)
 
+    def weightedSumDifference(self):
+        return 0
+
 class GameAgent:
     def __init__(self, state):
         self.state = state
@@ -269,12 +272,13 @@ class GameAgent:
         evaluate = UtilityEvaluator(state)
 
         if state.phase == "early":
-            return 1000*evaluate.cornerCapture() + 400*evaluate.stability() + 50*evaluate.mobility()
+            return 1000*evaluate.cornerCapture() + 400*evaluate.stability() + 300*evaluate.weightedSumDifference() + 50*evaluate.mobility()
         elif state.phase == "mid":
-            return 1000*evaluate.cornerCapture() + 400*evaluate.stability() + 20*evaluate.mobility() + 100*evaluate.discDifference()
+            return 1000*evaluate.cornerCapture() + 400*evaluate.stability() + 300*evaluate.weightedSumDifference() + 20*evaluate.mobility()\
+                 + 100*evaluate.discDifference()
         elif state.phase == "late":
-            return 1000*evaluate.cornerCapture() + 400*evaluate.stability() + 100*evaluate.mobility() + 500*evaluate.discDifference() \
-                + 50*evaluate.edgeControl() + 50*evaluate.cornerOccupancy()
+            return 1000*evaluate.cornerCapture() + 400*evaluate.stability() + 300*evaluate.weightedSumDifference() + 100*evaluate.mobility()\
+                 + 500*evaluate.discDifference() + 50*evaluate.edgeControl() + 50*evaluate.cornerOccupancy()
 
     def terminal_test(self, state):
         # Check if the board is full
