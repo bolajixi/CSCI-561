@@ -3,10 +3,11 @@
 import os
 import time
 import json
+import random
 
 start_time = time.time()
 
-global ASSIGNED_PLAYER, DIRECTION_MAP, HASHED_STATES
+global ASSIGNED_PLAYER, DIRECTION_MAP, ZOBRIST_KEYS, HASHED_STATES
 INPUT_FILE = "input.txt"
 OUTPUT_FILE = "output.txt"
 GAME_PLAY_DATA = "playdata.txt"
@@ -25,8 +26,8 @@ DIRECTION_MAP = {
     7: (-1, 1)          # Top-Left
 }
 
-MAX_DEPTH = 3           # Optimize for better depth limited search
-HASHED_STATES = {}      # Transposition table using Zobrist hashing
+MAX_DEPTH = 3                               # Optimize for better depth limited search
+ZOBRIST_KEYS, HASHED_STATES = {},{}         # Transposition table using Zobrist hashing
 
 
 # Preprocessing
@@ -39,13 +40,20 @@ if output_file_exists:
     print(f"Removed '{OUTPUT_FILE}' file")
 
 if game_play_data_exists:
-    print(f"Loading game play data from '{GAME_PLAY_DATA}' file")
-
+    print(f"*** Loading game play data from '{GAME_PLAY_DATA}' file ***")
     try:
         with open(GAME_PLAY_DATA, "r") as game_play_data_file:
-            HASHED_STATES = json.load(game_play_data_file)
+            data = json.load(game_play_data_file)
+            ZOBRIST_KEYS = data["_keys"]
+            HASHED_STATES = data["_hash"]
     except json.JSONDecodeError as e:
         print(f"*** Skip loading game play data *** (Reason: Error decoding JSON)")
+else:
+    ZOBRIST_KEYS = {}
+    for y in range(Y_GRID_SIZE):
+        for x in range(X_GRID_SIZE):
+            for player in ['X', 'O']:
+                ZOBRIST_KEYS[f"{x}_{y}_{player}"] = random.getrandbits(64)
 
 with open(INPUT_FILE, "r") as input_file:
     ASSIGNED_PLAYER = input_file.readline().strip() # Color X: Black, Color O: White
@@ -72,8 +80,15 @@ def location_mapper(location):
     return chr(x + 97) + str(y + 1)
 
 def zobrist_hash(board):
-    # Implement Zobrist hashing to generate a unique key for the given board state
-    pass
+    # Generate the Zobrist hash for the given board state
+    hash_value = 0
+    for y in range(Y_GRID_SIZE):
+        for x in range(X_GRID_SIZE):
+            cell = board[y][x]
+            if cell != '.':
+                hash_value ^= ZOBRIST_KEYS[f"{x}_{y}_{cell}"]
+
+    return hash_value
 
 def make_move(board, move, player):
     """
@@ -367,8 +382,6 @@ class GameAgent:
                 value, best_move = self.minimizer(self.state, MAX_DEPTH)
         elif algorithm_type == 'negamax':
             value, best_move = self.negamax(self.state, MAX_DEPTH)
-        elif algorithm_type == 'negascout':
-            value, best_move = self.negamax(self.state, MAX_DEPTH)
             
         return location_mapper((best_move[0], best_move[1]))
 
@@ -377,14 +390,15 @@ class GameAgent:
 # ---------------------------------------------------------------------------------------------------------------------------------------
 state = GameState(BOARD, ASSIGNED_PLAYER)
 agent = GameAgent(state)
+print(f"Board State Hash = {zobrist_hash(state.board)}")
 
-result = agent.solve('negascout')
+result = agent.solve('negamax')
 
 elapsed_time = time.time() - start_time
 print(f"\n{result} \n\nElapsed Time = {'%.2f' % round(elapsed_time, 2)} seconds")
 
 with open(GAME_PLAY_DATA, FILE_WRITE_FORMAT) as game_play_data_file:
-    json.dump(HASHED_STATES, game_play_data_file)
+    json.dump({"_keys": ZOBRIST_KEYS, "_hash": HASHED_STATES}, game_play_data_file)
 
 with open(OUTPUT_FILE, FILE_WRITE_FORMAT) as output_file:
     output_file.write(result + "\n")
