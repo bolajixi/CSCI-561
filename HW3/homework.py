@@ -65,19 +65,23 @@ if __name__ == "__main__":
         ## Train Data ~ 70%
         with open(f"train_data{data_set}.csv", newline='') as train_data_file:
             reader = csv.reader(train_data_file)
+            next(reader)        # Skip CSV headers
             X_train = np.array(list(reader), dtype=float)
 
         with open(f"train_label{data_set}.csv", newline='') as train_label_file:
             reader = csv.reader(train_label_file)
+            next(reader)        # Skip CSV headers
             y_train = np.array(list(reader), dtype=float)
 
         ## Test Data ~ 30%
         with open(f"test_data{data_set}.csv", newline='') as test_data_file:
             reader = csv.reader(test_data_file)
+            next(reader)        # Skip CSV headers
             X_test = np.array(list(reader), dtype=float)
 
         with open(f"test_label{data_set}.csv", newline='') as test_label_file:
             reader = csv.reader(test_label_file)
+            next(reader)        # Skip CSV headers
             y_test = np.array(list(reader), dtype=float)
 
         # Data description
@@ -86,14 +90,10 @@ if __name__ == "__main__":
         print(f"X_test shape: {X_test.shape}")
         print(f"y_test shape: {y_test.shape}")
 
-        # Initialize MLP
         mlp = MLP(input_size=2, hidden_size=4, output_size=1)
-
-        # Train the MLP
         mlp.train(X_train, y_train, epochs=1000, learning_rate=0.1, batch_size=2)
-
-        # Predict
         predictions = mlp.predict(X_test)
+
         result = zip(predictions, y_test)
 
         print("Predictions vs Actual:")
