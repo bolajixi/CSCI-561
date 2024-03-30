@@ -1,5 +1,6 @@
 import csv
 import numpy as np
+import pandas as pd
 
 class MLP:
     def __init__(self, input_size, hidden_size, output_size):
@@ -58,31 +59,24 @@ class MLP:
 # Core Algorithm
 if __name__ == "__main__":
     
-    for data_set in range(1, 2):
-        print(f"## -- Data Set {data_set}")
+    for data_set in range(1, 6):
+        print(f"## -- Data Set {data_set}\n")
         # Load pre-split training data
 
         ## Train Data ~ 70%
-        with open(f"train_data{data_set}.csv", newline='') as train_data_file:
-            reader = csv.reader(train_data_file)
-            next(reader)        # Skip CSV headers
-            X_train = np.array(list(reader), dtype=float)
-
-        with open(f"train_label{data_set}.csv", newline='') as train_label_file:
-            reader = csv.reader(train_label_file)
-            next(reader)        # Skip CSV headers
-            y_train = np.array(list(reader), dtype=float)
+        X_train = pd.read_csv(f"./testcases/train_data{data_set}.csv")
+        y_train = pd.read_csv(f"./testcases/train_label{data_set}.csv")
 
         ## Test Data ~ 30%
-        with open(f"test_data{data_set}.csv", newline='') as test_data_file:
-            reader = csv.reader(test_data_file)
-            next(reader)        # Skip CSV headers
-            X_test = np.array(list(reader), dtype=float)
+        X_test = pd.read_csv(f"./testcases/test_data{data_set}.csv")
+        y_test = pd.read_csv(f"./testcases/test_label{data_set}.csv")
 
-        with open(f"test_label{data_set}.csv", newline='') as test_label_file:
-            reader = csv.reader(test_label_file)
-            next(reader)        # Skip CSV headers
-            y_test = np.array(list(reader), dtype=float)
+        # Data processor
+        drop_columns = ['ADDRESS','STATE','MAIN_ADDRESS','STREET_NAME','LONG_NAME','FORMATTED_ADDRESS','LATITUDE','LONGITUDE']
+        processed_X_train = X_train.drop(columns=drop_columns)
+        print(f'Num of errors per column:\n{processed_X_train.isna().sum()}\n')
+
+        print(processed_X_train.head(5))
 
         # Data description
         print(f"X_train shape: {X_train.shape}")
@@ -90,12 +84,12 @@ if __name__ == "__main__":
         print(f"X_test shape: {X_test.shape}")
         print(f"y_test shape: {y_test.shape}")
 
-        mlp = MLP(input_size=2, hidden_size=4, output_size=1)
-        mlp.train(X_train, y_train, epochs=1000, learning_rate=0.1, batch_size=2)
-        predictions = mlp.predict(X_test)
+        # mlp = MLP(input_size=2, hidden_size=4, output_size=1)
+        # mlp.train(X_train, y_train, epochs=1000, learning_rate=0.1, batch_size=2)
+        # predictions = mlp.predict(X_test)
 
-        result = zip(predictions, y_test)
+        # result = zip(predictions, y_test)
 
-        print("Predictions vs Actual:")
-        for prediction, actual in result:
-            print(f"Prediction: {prediction:.2f}, --- Actual: {actual:.2f}")
+        # print("Predictions vs Actual:")
+        # for prediction, actual in result:
+        #     print(f"Prediction: {prediction:.2f}, --- Actual: {actual:.2f}")
