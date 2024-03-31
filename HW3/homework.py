@@ -56,33 +56,80 @@ class MLP:
     def predict(self, X):
         return self.forward(X)
 
+# Helper functions
+class Scaler:
+    def fit_transform(self, numerical_columns):
+        self.mean = np.mean(numerical_columns, axis=0)
+        self.std = np.std(numerical_columns, axis=0)
+        scaled_numerical_columns = (numerical_columns - self.mean) / self.std
+        return scaled_numerical_columns
+
+    def transform(self, numerical_columns):
+        scaled_numerical_columns = (numerical_columns - self.mean) / self.std
+        return scaled_numerical_columns
+
+def one_hot_encode(data, categorical_indices):
+    unique_categories = {}
+    for row in data:
+        for i in categorical_indices:
+            if row[i] not in unique_categories:
+                unique_categories[row[i]] = len(unique_categories)
+
+    num_unique_categories = len(unique_categories)
+    encoded_data = []
+    for row in data:
+        encoded_row = []
+        for i, value in enumerate(row):
+            if i in categorical_indices:
+                encoding = [0] * num_unique_categories
+                encoding[unique_categories[value]] = 1
+                encoded_row.extend(encoding)
+            else:
+                encoded_row.append(float(value))  # Convert numerical values to float
+        encoded_data.append(encoded_row)
+    return encoded_data, num_unique_categories
+
+
 # Core Algorithm
 if __name__ == "__main__":
     
     for data_set in range(1, 6):
-        print(f"## -- Data Set {data_set}\n")
-        # Load pre-split training data
+        print(f"\n## -- Data Set {data_set}")
+        print("---------------------------------------\n")
 
-        ## Train Data ~ 70%
+        # Load pre-split training data
         X_train = pd.read_csv(f"./testcases/train_data{data_set}.csv")
         y_train = pd.read_csv(f"./testcases/train_label{data_set}.csv")
 
-        ## Test Data ~ 30%
         X_test = pd.read_csv(f"./testcases/test_data{data_set}.csv")
         y_test = pd.read_csv(f"./testcases/test_label{data_set}.csv")
 
-        # Data processor
+        # Data processing
         drop_columns = ['ADDRESS','STATE','MAIN_ADDRESS','STREET_NAME','LONG_NAME','FORMATTED_ADDRESS','LATITUDE','LONGITUDE']
-        processed_X_train = X_train.drop(columns=drop_columns)
-        print(f'Num of errors per column:\n{processed_X_train.isna().sum()}\n')
+        X_train_copy = X_train.copy().drop(columns=drop_columns)
 
-        print(processed_X_train.head(5))
+        # Remove outliers (i.e houses that cost more than $100m)
+        X_train_copy = X_train_copy.drop(X_train_copy[X_train_copy['PRICE'] > 10**7].index)
+
+        col_to_scale = ['PRICE','BATH','PROPERTYSQFT']
+        col_to_encode = ['TYPE','ADMINISTRATIVE_AREA_LEVEL_2','LOCALITY','SUBLOCALITY']
+
+        scaler = Scaler()
+        scaled_numerical_columns = scaler.fit_transform(X_train_copy[col_to_scale])
+        X_train_copy[col_to_scale] = scaled_numerical_columns
+
+        encoded = pd.get_dummies(X_train_copy, columns=col_to_encode, drop_first=False)
+
+        print(encoded.head(5), '\n')
+        # break
 
         # Data description
-        print(f"X_train shape: {X_train.shape}")
-        print(f"y_train shape: {y_train.shape}")
-        print(f"X_test shape: {X_test.shape}")
-        print(f"y_test shape: {y_test.shape}")
+        print(f"X_train #{data_set} shape: {X_train.shape}")
+        print(f"y_train #{data_set} shape: {y_train.shape}")
+        print(f"X_test #{data_set} shape: {X_test.shape}")
+        print(f"y_test #{data_set} shape: {y_test.shape}")
+
+        print("\n---------------------------------------\n")
 
         # mlp = MLP(input_size=2, hidden_size=4, output_size=1)
         # mlp.train(X_train, y_train, epochs=1000, learning_rate=0.1, batch_size=2)
