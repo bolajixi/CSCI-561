@@ -20,6 +20,9 @@ class MLP:
     def sigmoid_derivative(self, x):
         return x * (1 - x)
 
+    def relu(self, x):
+        return np.maximum(0, x)
+
     def forward(self, X):
         # Forward pass through the network
         self.hidden_output = self.sigmoid(np.dot(X, self.weights_input_hidden) + self.bias_input_hidden)
@@ -68,26 +71,10 @@ class Scaler:
         scaled_numerical_columns = (numerical_columns - self.mean) / self.std
         return scaled_numerical_columns
 
-def one_hot_encode(data, categorical_indices):
-    unique_categories = {}
-    for row in data:
-        for i in categorical_indices:
-            if row[i] not in unique_categories:
-                unique_categories[row[i]] = len(unique_categories)
-
-    num_unique_categories = len(unique_categories)
-    encoded_data = []
-    for row in data:
-        encoded_row = []
-        for i, value in enumerate(row):
-            if i in categorical_indices:
-                encoding = [0] * num_unique_categories
-                encoding[unique_categories[value]] = 1
-                encoded_row.extend(encoding)
-            else:
-                encoded_row.append(float(value))  # Convert numerical values to float
-        encoded_data.append(encoded_row)
-    return encoded_data, num_unique_categories
+def one_hot(y):
+    y_one_hot = np.zeros((len(y), len(categories)))
+    y_one_hot[np.arange(len(y)), y] = 1
+    return y_one_hot
 
 
 # Core Algorithm
@@ -104,30 +91,35 @@ if __name__ == "__main__":
         X_test = pd.read_csv(f"./testcases/test_data{data_set}.csv")
         y_test = pd.read_csv(f"./testcases/test_label{data_set}.csv")
 
-        # Data processing
+        ## Data processing
         drop_columns = ['ADDRESS','STATE','MAIN_ADDRESS','STREET_NAME','LONG_NAME','FORMATTED_ADDRESS','LATITUDE','LONGITUDE']
         X_train_copy = X_train.copy().drop(columns=drop_columns)
 
-        # Remove outliers (i.e houses that cost more than $100m)
+        # - Remove outliers (i.e houses that cost more than $100m)
         X_train_copy = X_train_copy.drop(X_train_copy[X_train_copy['PRICE'] > 10**7].index)
+        y_train_values = y_train.values.flatten()
+        y_train_filtered = y_train.loc[X_train_copy.index]
+
+        # - Encode categorical variables (i.e. BEDS)
+        y_train_encoded, categories = pd.factorize(y_train_filtered.values.flatten())
+        one_hot_y = one_hot(y_train_encoded)
 
         col_to_scale = ['PRICE','BATH','PROPERTYSQFT']
         col_to_encode = ['TYPE','ADMINISTRATIVE_AREA_LEVEL_2','LOCALITY','SUBLOCALITY']
 
+        # - Scale numerical variables (i.e. PRICE, BATH, PROPERTYSQFT)
         scaler = Scaler()
         scaled_numerical_columns = scaler.fit_transform(X_train_copy[col_to_scale])
         X_train_copy[col_to_scale] = scaled_numerical_columns
 
-        encoded = pd.get_dummies(X_train_copy, columns=col_to_encode, drop_first=False)
+        X_train_encoded = pd.get_dummies(X_train_copy, columns=col_to_encode, drop_first=False)
 
-        print(encoded.head(5), '\n')
-        # break
+        # print(f"Categories (i.e number of beds): {categories}")
+        # print(X_train_encoded.head(5), '\n')
 
         # Data description
-        print(f"X_train #{data_set} shape: {X_train.shape}")
-        print(f"y_train #{data_set} shape: {y_train.shape}")
-        print(f"X_test #{data_set} shape: {X_test.shape}")
-        print(f"y_test #{data_set} shape: {y_test.shape}")
+        print(f"X_train #{data_set} shape: {X_train_encoded.shape}")
+        print(f"y_train #{data_set} shape: {one_hot_y.shape}")
 
         print("\n---------------------------------------\n")
 
