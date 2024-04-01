@@ -1,6 +1,7 @@
 import csv
 import numpy as np
 import pandas as pd
+from pandas import DataFrame
 
 class MLP:
     def __init__(self, input_size, hidden_size, output_size):
@@ -72,9 +73,12 @@ class Scaler:
         return scaled_numerical_columns
 
 def one_hot(y):
-    y_one_hot = np.zeros((len(y), len(categories)))
-    y_one_hot[np.arange(len(y)), y] = 1
-    return y_one_hot
+    # y_one_hot = np.zeros((len(y), len(categories)))
+    # y_one_hot[np.arange(len(y)), y] = 1
+    # return y_one_hot.T
+
+    df = DataFrame(y.astype(str), columns=['beds_'])
+    return pd.get_dummies(df)
 
 
 # Core Algorithm
@@ -101,8 +105,9 @@ if __name__ == "__main__":
         y_train_filtered = y_train.loc[X_train_copy.index]
 
         # - Encode categorical variables (i.e. BEDS)
-        y_train_encoded, categories = pd.factorize(y_train_filtered.values.flatten())
-        one_hot_y = one_hot(y_train_encoded)
+        # y_train_encoded, categories = pd.factorize(y_train_filtered.values.flatten())
+        one_hot_y = one_hot(y_train_filtered.values.flatten())
+        one_hot_y = one_hot_y.to_numpy().T
 
         col_to_scale = ['PRICE','BATH','PROPERTYSQFT']
         col_to_encode = ['TYPE','ADMINISTRATIVE_AREA_LEVEL_2','LOCALITY','SUBLOCALITY']
@@ -113,9 +118,6 @@ if __name__ == "__main__":
         X_train_copy[col_to_scale] = scaled_numerical_columns
 
         X_train_encoded = pd.get_dummies(X_train_copy, columns=col_to_encode, drop_first=False)
-
-        # print(f"Categories (i.e number of beds): {categories}")
-        # print(X_train_encoded.head(5), '\n')
 
         # Data description
         print(f"X_train #{data_set} shape: {X_train_encoded.shape}")
