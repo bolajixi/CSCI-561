@@ -73,12 +73,14 @@ class Scaler:
         return scaled_numerical_columns
 
 def one_hot(y):
-    # y_one_hot = np.zeros((len(y), len(categories)))
-    # y_one_hot[np.arange(len(y)), y] = 1
-    # return y_one_hot.T
+    df = DataFrame(y.astype(str), columns=['beds'])
+    one_hot_encoded = pd.get_dummies(df, dtype=int)
+    return one_hot_encoded, list(one_hot_encoded.columns)
 
-    df = DataFrame(y.astype(str), columns=['beds_'])
-    return pd.get_dummies(df)
+def reverse_one_hot(one_hot_encoded, categories):
+    max_indices = np.argmax(one_hot_encoded, axis=1)
+    reverse_encoded = [categories[idx] for idx in max_indices]
+    return reverse_encoded
 
 
 # Core Algorithm
@@ -106,7 +108,7 @@ if __name__ == "__main__":
 
         # - Encode categorical variables (i.e. BEDS)
         # y_train_encoded, categories = pd.factorize(y_train_filtered.values.flatten())
-        one_hot_y = one_hot(y_train_filtered.values.flatten())
+        one_hot_y, categories = one_hot(y_train_filtered.values.flatten())
         one_hot_y = one_hot_y.to_numpy().T
 
         col_to_scale = ['PRICE','BATH','PROPERTYSQFT']
@@ -123,14 +125,17 @@ if __name__ == "__main__":
         print(f"X_train #{data_set} shape: {X_train_encoded.shape}")
         print(f"y_train #{data_set} shape: {one_hot_y.shape}")
 
+        mlp = MLP(input_size=2, hidden_size=4, output_size=1)
+        mlp.train(X_train, y_train, epochs=1000, learning_rate=0.1, batch_size=2)
+
+        predictions = mlp.predict(X_test)
+        predicted_beds = reverse_one_hot(predictions, categories)
+        predicted_beds = [prediction.split('beds_')[1] for prediction in predicted_beds]
+
+        result = zip(predictions, y_test.values.flatten())
+
+        print("Predictions vs Actual:")
+        for prediction, actual in result:
+            print(f"Prediction: {prediction:.2f}, --- Actual: {actual:.2f}")
+
         print("\n---------------------------------------\n")
-
-        # mlp = MLP(input_size=2, hidden_size=4, output_size=1)
-        # mlp.train(X_train, y_train, epochs=1000, learning_rate=0.1, batch_size=2)
-        # predictions = mlp.predict(X_test)
-
-        # result = zip(predictions, y_test)
-
-        # print("Predictions vs Actual:")
-        # for prediction, actual in result:
-        #     print(f"Prediction: {prediction:.2f}, --- Actual: {actual:.2f}")
