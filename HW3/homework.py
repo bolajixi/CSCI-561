@@ -1,7 +1,6 @@
 import csv
 import numpy as np
 import pandas as pd
-from pandas import DataFrame
 
 class MLP:
     def __init__(self, input_size, hidden_size, output_size):
@@ -23,6 +22,10 @@ class MLP:
 
     def relu(self, x):
         return np.maximum(0, x)
+
+    def softmax(self, x):
+        exp_x = np.exp(x - np.max(x, axis=1, keepdims=True))
+        return exp_x / np.sum(exp_x, axis=1, keepdims=True)  # Normalize to sum to 1 along each row
 
     def forward(self, X):
         # Forward pass through the network
@@ -74,70 +77,111 @@ class Scaler:
         scaled_numerical_columns = (numerical_columns - self.mean) / self.std
         return scaled_numerical_columns
 
-def one_hot(y):
-    df = DataFrame(y.astype(str), columns=['beds'])
-    one_hot_encoded = pd.get_dummies(df, dtype=int)
-    return one_hot_encoded, list(one_hot_encoded.columns)
+class OneHotEncoder:
+    def __init__(self):
+        self.categories_ = None
+        
+    def fit(self, data):
+        self.categories_ = {}
+        for column in data.columns:
+            unique_values = data[column].unique()
+            self.categories_[column] = sorted(unique_values)
+        
+    def transform(self, data):
+        if self.categories_ is None:
+            raise ValueError("fit method should be called first")
+        
+        encoded_data = pd.DataFrame()
+        for column in data.columns:
+            for category in self.categories_[column]:
+                encoded_data[column + '_' + str(category)] = (data[column] == category).astype(int)
+        
+        return encoded_data
+    
+    def fit_transform(self, data):
+        self.fit(data)
+        return self.transform(data)
 
-def reverse_one_hot(one_hot_encoded, categories):
-    max_indices = np.argmax(one_hot_encoded, axis=1)
-    reverse_encoded = [categories[idx] for idx in max_indices]
-    return reverse_encoded
+
+# Core functions ------------------------------------------------------------------------------
+def load_data(data_set):
+    """
+    Load pre-split training and testing data for a given data set.
+    """
+    X_train = pd.read_csv(f"./testcases/train_data{data_set}.csv")
+    y_train = pd.read_csv(f"./testcases/train_label{data_set}.csv")
+    X_test = pd.read_csv(f"./testcases/test_data{data_set}.csv")
+    try:
+        y_test = pd.read_csv(f"./testcases/test_label{data_set}.csv")
+    except FileNotFoundError:
+        y_test = None
+
+    return X_train, y_train, X_test, y_test
+
+def preprocess_data(x_train, y_train, x_test, col_to_scale, col_to_encode, scaler, encoder):
+    """
+    Preprocess the training data: drop columns, remove outliers, scale numerical variables,
+    encode categorical variables, and return the processed data.
+    """
+    drop_columns = ['ADDRESS', 'STATE', 'MAIN_ADDRESS', 'STREET_NAME', 'LONG_NAME', 
+                    'FORMATTED_ADDRESS', 'LATITUDE', 'LONGITUDE', 'LOCALITY', 'BROKERTITLE']
+    X_train_copy = x_train.copy().drop(columns=drop_columns)
+    X_test_copy = x_test.copy().drop(columns=drop_columns)
 
 
-# Core Algorithm
+    # Remove outliers (i.e houses that cost more than $100m)
+    X_train_copy = X_train_copy[X_train_copy['PRICE'] <= 10**7]
+    y_filtered = y_train.loc[X_train_copy.index]
+    processed_Y_train = y_filtered.to_numpy()
+
+    # Scale numerical variables
+    X_train_copy[col_to_scale] = scaler.fit_transform(X_train_copy[col_to_scale])
+    X_test_copy[col_to_scale] = scaler.transform(X_test_copy[col_to_scale])
+
+    # Encode categorical variables
+    X_train_encoded = encoder.fit_transform(X_train_copy[col_to_encode])
+    X_test_encoded = encoder.transform(X_test_copy[col_to_encode])
+
+    processed_X_train = pd.concat([X_train_copy, X_train_encoded], axis=1).drop(columns=col_to_encode).to_numpy()
+    processed_X_test = pd.concat([X_test_copy, X_test_encoded], axis=1).drop(columns=col_to_encode).to_numpy()
+    
+    return processed_X_train, processed_Y_train, processed_X_test
+
+
+# Core Algorithm ------------------------------------------------------------------------------
 if __name__ == "__main__":
     
     for data_set in range(1, 6):
         print(f"\n## -- Data Set {data_set}")
         print("---------------------------------------\n")
 
-        # Load pre-split training data
-        X_train = pd.read_csv(f"./testcases/train_data{data_set}.csv")
-        y_train = pd.read_csv(f"./testcases/train_label{data_set}.csv")
-
-        X_test = pd.read_csv(f"./testcases/test_data{data_set}.csv")
-        y_test = pd.read_csv(f"./testcases/test_label{data_set}.csv")
-
-        ## Data processing
-        drop_columns = ['ADDRESS','STATE','MAIN_ADDRESS','STREET_NAME','LONG_NAME','FORMATTED_ADDRESS','LATITUDE','LONGITUDE','LOCALITY','BROKERTITLE']
-        X_train_copy = X_train.copy().drop(columns=drop_columns)
-
-        # - Remove outliers (i.e houses that cost more than $100m)
-        X_train_copy = X_train_copy.drop(X_train_copy[X_train_copy['PRICE'] > 10**7].index)
-        y_train_values = y_train.values.flatten()
-        y_train_filtered = y_train.loc[X_train_copy.index]
-
-        # - Encode categorical variables (i.e. BEDS)
-        # y_train_encoded, categories = pd.factorize(y_train_filtered.values.flatten())
-        one_hot_y, categories = one_hot(y_train_filtered.values.flatten())
-        one_hot_y = one_hot_y.to_numpy()
+        X_train, y_train, X_test, y_test = load_data(data_set)
 
         col_to_scale = ['PRICE','BATH','PROPERTYSQFT']
         col_to_encode = ['TYPE','ADMINISTRATIVE_AREA_LEVEL_2','SUBLOCALITY']
 
-        # - Scale numerical variables (i.e. PRICE, BATH, PROPERTYSQFT)
         scaler = Scaler()
-        scaled_numerical_columns = scaler.fit_transform(X_train_copy[col_to_scale])
-        X_train_copy[col_to_scale] = scaled_numerical_columns
+        encoder = OneHotEncoder()
 
-        X_train_encoded = pd.get_dummies(X_train_copy, columns=col_to_encode, drop_first=False, dtype=int).to_numpy()
+        processed_X_train, processed_Y_train, processed_X_test = preprocess_data(X_train, y_train, X_test, col_to_scale, col_to_encode, scaler, encoder)
 
         # Data description
-        print(f"X_train #{data_set} shape: {X_train_encoded.shape}")
-        print(f"y_train #{data_set} shape: {one_hot_y.shape}")
+        print(f"X_train #{data_set} shape: {processed_X_train.shape}")
+        print(f"y_train #{data_set} shape: {processed_Y_train.shape}")
+        print(f"X_test #{data_set} shape: {processed_X_test.shape}")
 
-        mlp = MLP(input_size=57, hidden_size=4, output_size=22)
-        mlp.train(X_train_encoded, one_hot_y, epochs=1000, learning_rate=0.1, batch_size=100)
+        mlp = MLP(input_size= processed_X_train.shape[1], hidden_size=4, output_size=1)
 
-        predictions = mlp.predict(X_test)
-        predicted_beds = reverse_one_hot(predictions, categories)
-        predicted_beds = [prediction.split('beds_')[1] for prediction in predicted_beds]
+        mlp.train(processed_X_train, processed_Y_train, epochs=1000, learning_rate=0.01, batch_size=100)
+        predictions = mlp.predict(processed_X_test)
 
-        result = zip(predictions, y_test.values.flatten())
+        result = zip(predictions.flatten(), y_test.values.flatten())
 
         print("Predictions vs Actual:")
-        for prediction, actual in result:
+        for count, (prediction, actual) in enumerate(result):
             print(f"Prediction: {prediction:.2f}, --- Actual: {actual:.2f}")
+
+            if count == 10:     # Print first predictions
+                break
 
         print("\n---------------------------------------\n")
