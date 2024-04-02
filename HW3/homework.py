@@ -55,7 +55,9 @@ class MLP:
                 self.backward(X_batch, y_batch, learning_rate)
 
             if epoch % 100 == 0:        # Print error every 100 epochs
-                print(f'Epoch {epoch}: Error {np.mean(np.square(y - self.predict(X)))}')
+                mse = np.mean(np.square(y - self.predict(X)))
+                error_percentage = mse * 100
+                print(f'Epoch {epoch}: Error {error_percentage:.2f}%')
 
     def predict(self, X):
         return self.forward(X)
@@ -98,7 +100,7 @@ if __name__ == "__main__":
         y_test = pd.read_csv(f"./testcases/test_label{data_set}.csv")
 
         ## Data processing
-        drop_columns = ['ADDRESS','STATE','MAIN_ADDRESS','STREET_NAME','LONG_NAME','FORMATTED_ADDRESS','LATITUDE','LONGITUDE']
+        drop_columns = ['ADDRESS','STATE','MAIN_ADDRESS','STREET_NAME','LONG_NAME','FORMATTED_ADDRESS','LATITUDE','LONGITUDE','LOCALITY','BROKERTITLE']
         X_train_copy = X_train.copy().drop(columns=drop_columns)
 
         # - Remove outliers (i.e houses that cost more than $100m)
@@ -109,24 +111,24 @@ if __name__ == "__main__":
         # - Encode categorical variables (i.e. BEDS)
         # y_train_encoded, categories = pd.factorize(y_train_filtered.values.flatten())
         one_hot_y, categories = one_hot(y_train_filtered.values.flatten())
-        one_hot_y = one_hot_y.to_numpy().T
+        one_hot_y = one_hot_y.to_numpy()
 
         col_to_scale = ['PRICE','BATH','PROPERTYSQFT']
-        col_to_encode = ['TYPE','ADMINISTRATIVE_AREA_LEVEL_2','LOCALITY','SUBLOCALITY']
+        col_to_encode = ['TYPE','ADMINISTRATIVE_AREA_LEVEL_2','SUBLOCALITY']
 
         # - Scale numerical variables (i.e. PRICE, BATH, PROPERTYSQFT)
         scaler = Scaler()
         scaled_numerical_columns = scaler.fit_transform(X_train_copy[col_to_scale])
         X_train_copy[col_to_scale] = scaled_numerical_columns
 
-        X_train_encoded = pd.get_dummies(X_train_copy, columns=col_to_encode, drop_first=False)
+        X_train_encoded = pd.get_dummies(X_train_copy, columns=col_to_encode, drop_first=False, dtype=int).to_numpy()
 
         # Data description
         print(f"X_train #{data_set} shape: {X_train_encoded.shape}")
         print(f"y_train #{data_set} shape: {one_hot_y.shape}")
 
-        mlp = MLP(input_size=2, hidden_size=4, output_size=1)
-        mlp.train(X_train, y_train, epochs=1000, learning_rate=0.1, batch_size=2)
+        mlp = MLP(input_size=57, hidden_size=4, output_size=22)
+        mlp.train(X_train_encoded, one_hot_y, epochs=1000, learning_rate=0.1, batch_size=100)
 
         predictions = mlp.predict(X_test)
         predicted_beds = reverse_one_hot(predictions, categories)
