@@ -1,24 +1,28 @@
 import csv
 import numpy as np
 import pandas as pd
+import random
 
 class MLP:
-    def __init__(self, input_size, hidden_size, output_size):
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.output_size = output_size
+    def __init__(self, layer_size):
+        self.input_size = layer_size[0]
+        self.output_size = layer_size[-1]
+        # self.hidden_size = layer_size[1]
 
-        # Initialize weights and biases
-        self.w1 = np.random.randn(self.hidden_size, self.input_size)                        # weights_input_hidden
-        self.b1 = np.random.randn(self.hidden_size, 1)                                      # bias_input_hidden
-        self.w2 = np.random.randn(self.output_size, self.hidden_size)                       # weights_hidden_output
-        self.b2 = np.random.randn(self.output_size, 1)                                      # bias_hidden_output
+        self.sizes_per_layer = layer_size
+        self.num_layers = len(layer_size)
+
+        # Initialize weights and biases for hidden layer --> output layer
+        self.weights = [np.random.randn(layer_output_size, layer_input_size)/np.sqrt(layer_input_size)
+                        for layer_input_size, layer_output_size in zip(self.sizes_per_layer[:-1], self.sizes_per_layer[1:])]
+
+        self.biases = [np.random.randn(y, 1) for y in self.sizes_per_layer[1:]]
 
     def sigmoid(self, x):
         return 1 / (1 + np.exp(-x))
 
     def sigmoid_derivative(self, x):
-        return x * (1 - x)
+        return self.sigmoid(x) * (1 - self.sigmoid(x))
 
     def relu(self, x):
         return np.maximum(0, x)
@@ -33,41 +37,71 @@ class MLP:
 
     def forward(self, X):
         # Forward pass through the network
-        self.z1 = np.dot(self.w1, X) + self.b1
-        self.hidden_output = self.relu(self.z1)
+        for bias, weight in zip(self.biases, self.weights):
+            X = self.relu(np.dot(weight, X) + bias)
 
-        self.z2 = np.dot(self.w2, self.hidden_output) + self.b2
-        self.output = self.softmax(self.z2)
+        self.output = X
         return self.output
 
     def backward(self, X, y, learning_rate):
-        m = y.size
+        # Forward pass ------------------------------------------------------
+        current_activation = X
+        all_activations = [X]                       # list to store all the activations, layer by layer
+        all_z_vectors = []                          # list to store all the z vectors, layer by layer
+        
+        for bias, weight in zip(self.biases, self.weights):
+            current_z = np.dot(weight, current_activation) + bias
+            all_z_vectors.append(current_z)
 
-        # Calculate gradients
-        dZ2 = self.output - y                                                                # error
-        dW2 = 1 / m * np.dot(dZ2, self.hidden_output.T)
-        db2 = 1 / m * np.sum(dZ2)
+            current_activation = self.relu(current_z)
+            all_activations.append(current_activation)
 
-        dZ1 = np.dot(self.w2.T, dZ2) * self.relu_derivative(self.z1)
-        dW1 = 1 / m * np.dot(dZ1, X.T)
-        db1 = 1 / m * np.sum(dZ1)
 
-        # Update weights and biases
-        self.w1 -= learning_rate * dW1
-        self.b1 -= learning_rate * db1
-        self.w2 -= learning_rate * dW2
-        self.b2 -= learning_rate * db2
+        # Backward pass ------------------------------------------------------
+        nabla_b = [np.zeros(bias.shape) for bias in self.biases]
+        nabla_w = [np.zeros(weight.shape) for weight in self.weights]
 
-    def train(self, X, y, epochs, learning_rate, batch_size):
-        data_size = len(X)
+        output_error = (all_activations[-1] - y) * self.relu_derivative(all_z_vectors[-1])
+        nabla_b[-1] = output_error
+        nabla_w[-1] = np.dot(output_error, all_activations[-2].transpose())
+
+        for l in range(2, self.num_layers):
+            z = all_z_vectors[-l]
+            d_relu = self.relu_derivative(z)
+            output_error = np.dot(self.weights[-l+1].transpose(), output_error) * d_relu
+            nabla_b[-l] = output_error
+            nabla_w[-l] = np.dot(output_error, all_activations[-l-1].transpose())
+
+        return (nabla_b, nabla_w)
+
+
+    def _update_mini_batch(self, batch, learning_rate):
+        nabla_b = [np.zeros(bias.shape) for bias in self.biases]
+        nabla_w = [np.zeros(weight.shape) for weight in self.weights]
+
+        batch_size = len(batch)
+        X_batch, y_batch = zip(*batch)
+
+        delta_nabla_b, delta_nabla_w = self.backward(X_batch, y_batch, learning_rate)
+        nabla_b = [nb+dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
+        nabla_w = [nw+dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
+
+        # Update weights and biases ------------------------------------------
+        self.weights = [w-(learning_rate/batch_size)*nw
+                        for w, nw in zip(self.weights, nabla_w)]
+        self.biases = [b-(learning_rate/batch_size)*nb
+                       for b, nb in zip(self.biases, nabla_b)]
+
+    def train(self, training_data, epochs, learning_rate, batch_size):
+        data_size = len(training_data)
         for epoch in range(epochs):
-            for i in range(0, data_size, batch_size):
-                X_batch = X[i:i+batch_size]
-                y_batch = y[i:i+batch_size]
-                output = self.forward(X_batch)
-                self.backward(X_batch, y_batch, learning_rate)
+            random.shuffle(training_data)
+            mini_batches = [training_data[i:i+batch_size] for i in range(0, data_size, batch_size)]
 
-            if epoch % 100 == 0:        # Print error every 100 epochs
+            for batch in mini_batches:
+                self._update_mini_batch(batch, learning_rate)
+
+            if epoch % 100 == 0:                                    # Print error every 100 epochs
                 mse = np.mean(np.square(y - self.predict(X)))
                 error_percentage = mse * 100
                 print(f'Epoch {epoch}: Error {error_percentage:.2f}%')
@@ -138,12 +172,6 @@ def preprocess_data(x_train, y_train, x_test, col_to_scale, col_to_encode, scale
     X_train_copy = x_train.copy().drop(columns=drop_columns)
     X_test_copy = x_test.copy().drop(columns=drop_columns)
 
-
-    # Remove outliers (i.e houses that cost more than $100m)
-    X_train_copy = X_train_copy[X_train_copy['PRICE'] <= 10**7]
-    y_filtered = y_train.loc[X_train_copy.index]
-    processed_Y_train = y_filtered.to_numpy()
-
     # Scale numerical variables
     X_train_copy[col_to_scale] = scaler.fit_transform(X_train_copy[col_to_scale])
     X_test_copy[col_to_scale] = scaler.transform(X_test_copy[col_to_scale])
@@ -184,9 +212,12 @@ if __name__ == "__main__":
         print(f"y_train #{data_set} shape: {processed_Y_train.shape}")
         print(f"X_test #{data_set} shape: {processed_X_test.shape}")
 
-        mlp = MLP(input_size= processed_X_train.shape[0], hidden_size=10, output_size=1)
+        network_layer_sizes = [processed_X_train.shape[0], 10, 1]    # input_size, { hidden_size .. }, output_size
+        mlp = MLP(layer_size = network_layer_sizes)
+        
+        training_data = zip(processed_X_train, processed_Y_train)
 
-        mlp.train(processed_X_train, processed_Y_train, epochs=1000, learning_rate=0.01, batch_size=100)
+        mlp.train(training_data, epochs=1000, learning_rate=0.01, batch_size=100)
         predictions = mlp.predict(processed_X_test)
 
         result = zip(predictions.flatten(), y_test.values.flatten())
