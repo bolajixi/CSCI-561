@@ -23,19 +23,21 @@ class MLP:
     def relu(self, x):
         return np.maximum(0, x)
 
+    def relu_derivative(self, x):
+        return (x > 0)
+
     def softmax(self, x):
-        exp_x = np.exp(x - np.max(x, axis=1, keepdims=True))
-        return exp_x / np.sum(exp_x, axis=1, keepdims=True)  # Normalize to sum to 1 along each row
+        return np.exp(x) / np.sum(np.exp(x), axis=1, keepdims=True)
 
     def forward(self, X):
         # Forward pass through the network
-        self.hidden_output = self.sigmoid(np.dot(X, self.weights_input_hidden) + self.bias_input_hidden)
-        self.output = self.sigmoid(np.dot(self.hidden_output, self.weights_hidden_output) + self.bias_hidden_output)
+        self.hidden_output = self.relu(np.dot(X, self.weights_input_hidden) + self.bias_input_hidden)
+        self.output = self.softmax(np.dot(self.hidden_output, self.weights_hidden_output) + self.bias_hidden_output)
         return self.output
 
     def backward(self, X, y, learning_rate):
         # Back-Propagation
-        error = y - self.output
+        error = self.output - y
 
         # Calculate gradients
         delta_output = error * self.sigmoid_derivative(self.output)
