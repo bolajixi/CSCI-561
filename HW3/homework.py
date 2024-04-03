@@ -9,10 +9,10 @@ class MLP:
         self.output_size = output_size
 
         # Initialize weights and biases
-        self.weights_input_hidden = np.random.randn(self.input_size, self.hidden_size)
-        self.bias_input_hidden = np.random.randn(1, self.hidden_size)
-        self.weights_hidden_output = np.random.randn(self.hidden_size, self.output_size)
-        self.bias_hidden_output = np.random.randn(1, self.output_size)
+        self.w1 = np.random.randn(self.hidden_size, self.input_size)                        # weights_input_hidden
+        self.b1 = np.random.randn(self.hidden_size, 1)                                      # bias_input_hidden
+        self.w2 = np.random.randn(self.output_size, self.hidden_size)                       # weights_hidden_output
+        self.b2 = np.random.randn(self.output_size, 1)                                      # bias_hidden_output
 
     def sigmoid(self, x):
         return 1 / (1 + np.exp(-x))
@@ -27,28 +27,36 @@ class MLP:
         return (x > 0)
 
     def softmax(self, x):
-        return np.exp(x) / np.sum(np.exp(x), axis=1, keepdims=True)
+        # return np.exp(x) / np.sum(np.exp(x), axis=1, keepdims=True)
+        exp_x = np.exp(x - np.max(x, axis=1, keepdims=True))
+        return exp_x / np.sum(exp_x, axis=1, keepdims=True)
 
     def forward(self, X):
         # Forward pass through the network
-        self.hidden_output = self.relu(np.dot(X, self.weights_input_hidden) + self.bias_input_hidden)
-        self.output = self.softmax(np.dot(self.hidden_output, self.weights_hidden_output) + self.bias_hidden_output)
+        self.z1 = np.dot(self.w1, X) + self.b1
+        self.hidden_output = self.relu(self.z1)
+
+        self.z2 = np.dot(self.w2, self.hidden_output) + self.b2
+        self.output = self.softmax(self.z2)
         return self.output
 
     def backward(self, X, y, learning_rate):
-        # Back-Propagation
-        error = self.output - y
+        m = y.size
 
         # Calculate gradients
-        delta_output = error * self.sigmoid_derivative(self.output)
-        error_hidden = delta_output.dot(self.weights_hidden_output.T)
-        delta_hidden = error_hidden * self.sigmoid_derivative(self.hidden_output)
+        dZ2 = self.output - y                                                                # error
+        dW2 = 1 / m * np.dot(dZ2, self.hidden_output.T)
+        db2 = 1 / m * np.sum(dZ2)
+
+        dZ1 = np.dot(self.w2.T, dZ2) * self.relu_derivative(self.z1)
+        dW1 = 1 / m * np.dot(dZ1, X.T)
+        db1 = 1 / m * np.sum(dZ1)
 
         # Update weights and biases
-        self.weights_hidden_output += self.hidden_output.T.dot(delta_output) * learning_rate
-        self.bias_hidden_output += np.sum(delta_output, axis=0, keepdims=True) * learning_rate
-        self.weights_input_hidden += X.T.dot(delta_hidden) * learning_rate
-        self.bias_input_hidden += np.sum(delta_hidden, axis=0, keepdims=True) * learning_rate
+        self.w1 -= learning_rate * dW1
+        self.b1 -= learning_rate * db1
+        self.w2 -= learning_rate * dW2
+        self.b2 -= learning_rate * db2
 
     def train(self, X, y, epochs, learning_rate, batch_size):
         data_size = len(X)
@@ -167,12 +175,16 @@ if __name__ == "__main__":
 
         processed_X_train, processed_Y_train, processed_X_test = preprocess_data(X_train, y_train, X_test, col_to_scale, col_to_encode, scaler, encoder)
 
+        processed_X_train = processed_X_train.T
+        processed_Y_train = processed_Y_train.T
+        processed_X_test = processed_X_test.T
+
         # Data description
         print(f"X_train #{data_set} shape: {processed_X_train.shape}")
         print(f"y_train #{data_set} shape: {processed_Y_train.shape}")
         print(f"X_test #{data_set} shape: {processed_X_test.shape}")
 
-        mlp = MLP(input_size= processed_X_train.shape[1], hidden_size=4, output_size=1)
+        mlp = MLP(input_size= processed_X_train.shape[0], hidden_size=10, output_size=1)
 
         mlp.train(processed_X_train, processed_Y_train, epochs=1000, learning_rate=0.01, batch_size=100)
         predictions = mlp.predict(processed_X_test)
