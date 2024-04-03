@@ -92,7 +92,7 @@ class MLP:
         self.biases = [b-(learning_rate/batch_size)*nb
                        for b, nb in zip(self.biases, nabla_b)]
 
-    def train(self, training_data, epochs, learning_rate, batch_size):
+    def train(self, training_data, epochs, learning_rate, batch_size, test_data=None):
         data_size = len(training_data)
         for epoch in range(epochs):
             random.shuffle(training_data)
@@ -101,13 +101,24 @@ class MLP:
             for batch in mini_batches:
                 self._update_mini_batch(batch, learning_rate)
 
-            if epoch % 100 == 0:                                    # Print error every 100 epochs
-                mse = np.mean(np.square(y - self.predict(X)))
-                error_percentage = mse * 100
-                print(f'Epoch {epoch}: Error {error_percentage:.2f}%')
+            if epoch % 100 == 0 and test_data is not None:                                    # Print error every 100 epochs
+                X, y = zip(*test_data)
+
+                result = (self.parse_results(self.predict(X)), y)
+                num_correct_predictions = sum(int(x == y) for (x, y) in result)
+
+                for count, (prediction, actual) in enumerate(result):
+                    print(f"Prediction: {prediction}, --- Actual: {actual}")
+
+                    if count == 10:     # Print first predictions
+                        break
 
     def predict(self, X):
-        return self.forward(X)
+        return np.argmax(self.forward(X))
+
+    def parse_results(self, results):
+        # convert one hot encoding to classification category
+        return
 
 # Helper functions
 class Scaler:
@@ -188,6 +199,8 @@ def preprocess_data(x_train, y_train, x_test, col_to_scale, col_to_encode, scale
 
 # Core Algorithm ------------------------------------------------------------------------------
 if __name__ == "__main__":
+    OUTPUT_FILE = "output.txt"
+    FILE_WRITE_FORMAT = "w"
     
     for data_set in range(1, 6):
         print(f"\n## -- Data Set {data_set}")
@@ -216,17 +229,15 @@ if __name__ == "__main__":
         mlp = MLP(layer_size = network_layer_sizes)
         
         training_data = zip(processed_X_train, processed_Y_train)
+        test_data = zip(processed_X_test, y_test)
 
-        mlp.train(training_data, epochs=1000, learning_rate=0.01, batch_size=100)
+        mlp.train(training_data, epochs=1000, learning_rate=0.01, batch_size=100, test_data=test_data)
         predictions = mlp.predict(processed_X_test)
 
-        result = zip(predictions.flatten(), y_test.values.flatten())
+        result = ['BEDS'] + [str(i) for i in self.parse_results(predictions)]
+        result = '\n'.join(result)
 
-        print("Predictions vs Actual:")
-        for count, (prediction, actual) in enumerate(result):
-            print(f"Prediction: {prediction:.2f}, --- Actual: {actual:.2f}")
-
-            if count == 10:     # Print first predictions
-                break
+        with open(OUTPUT_FILE, FILE_WRITE_FORMAT) as output_file:
+            output_file.write(result + "\n")
 
         print("\n---------------------------------------\n")
