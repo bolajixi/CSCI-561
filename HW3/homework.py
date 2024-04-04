@@ -4,9 +4,10 @@ import pandas as pd
 import random
 
 class MLP:
-    def __init__(self, layer_size):
+    def __init__(self, layer_size, output_encoder):
         self.input_size = layer_size[0]
         self.output_size = layer_size[-1]
+        self.output_encoder = output_encoder
         # self.hidden_size = layer_size[1]
 
         self.sizes_per_layer = layer_size
@@ -80,7 +81,7 @@ class MLP:
         nabla_w = [np.zeros(weight.shape) for weight in self.weights]
 
         batch_size = len(batch)
-        X_batch, y_batch = zip(*batch)
+        X_batch, y_batch = (batch)
 
         delta_nabla_b, delta_nabla_w = self.backward(X_batch, y_batch, learning_rate)
         nabla_b = [nb+dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
@@ -104,7 +105,7 @@ class MLP:
             if epoch % 100 == 0 and test_data is not None:                                    # Print error every 100 epochs
                 X, y = zip(*test_data)
 
-                result = (self.parse_results(self.predict(X)), y)
+                result = (self.output_encoder.inverse_transform('BEDS', self.predict(X)), y)
                 num_correct_predictions = sum(int(x == y) for (x, y) in result)
 
                 for count, (prediction, actual) in enumerate(result):
@@ -114,11 +115,7 @@ class MLP:
                         break
 
     def predict(self, X):
-        return np.argmax(self.forward(X))
-
-    def parse_results(self, results):
-        # convert one hot encoding to classification category
-        return
+        return np.argmax(self.forward(X), axis=1)
 
 # Helper functions
 class Scaler:
@@ -157,6 +154,18 @@ class OneHotEncoder:
         self.fit(data)
         return self.transform(data)
 
+    def inverse_transform(self, category, encoded_data):
+        if self.categories_ is None:
+            raise ValueError("fit method should be called first")
+
+        num_samples = encoded_data.shape[0]
+        original_data = np.zeros((num_samples,), dtype=int)
+        
+        for i in range(num_samples):
+            index = int(encoded_data[i])
+            original_data[i] = self.categories_[category][index]
+        
+        return original_data
 
 # Core functions ------------------------------------------------------------------------------
 def load_data(data_set):
@@ -173,7 +182,7 @@ def load_data(data_set):
 
     return X_train, y_train, X_test, y_test
 
-def preprocess_data(x_train, y_train, x_test, col_to_scale, col_to_encode, scaler, encoder):
+def preprocess_data(x_train, y_train, x_test, y_test, col_to_scale, col_to_encode, scaler, encoders):
     """
     Preprocess the training data: drop columns, remove outliers, scale numerical variables,
     encode categorical variables, and return the processed data.
@@ -183,18 +192,28 @@ def preprocess_data(x_train, y_train, x_test, col_to_scale, col_to_encode, scale
     X_train_copy = x_train.copy().drop(columns=drop_columns)
     X_test_copy = x_test.copy().drop(columns=drop_columns)
 
+    x_encoder, y_encoder = encoders
+
     # Scale numerical variables
     X_train_copy[col_to_scale] = scaler.fit_transform(X_train_copy[col_to_scale])
     X_test_copy[col_to_scale] = scaler.transform(X_test_copy[col_to_scale])
 
-    # Encode categorical variables
-    X_train_encoded = encoder.fit_transform(X_train_copy[col_to_encode])
-    X_test_encoded = encoder.transform(X_test_copy[col_to_encode])
+    # Encode categorical variables -- (X)
+    X_train_encoded = x_encoder.fit_transform(X_train_copy[col_to_encode])
+    X_test_encoded = x_encoder.transform(X_test_copy[col_to_encode])
 
     processed_X_train = pd.concat([X_train_copy, X_train_encoded], axis=1).drop(columns=col_to_encode).to_numpy()
     processed_X_test = pd.concat([X_test_copy, X_test_encoded], axis=1).drop(columns=col_to_encode).to_numpy()
+
+    # Encode categorical variables -- (Y)
+    processed_Y_train = y_encoder.fit_transform(y_train)
+    processed_Y_test = None
+
+    if y_test is not None:
+        processed_Y_test = y_encoder.transform(y_test)
+        return processed_X_train, processed_Y_train, processed_X_test, processed_Y_test
     
-    return processed_X_train, processed_Y_train, processed_X_test
+    return processed_X_train, processed_Y_train, processed_X_test, None
 
 
 # Core Algorithm ------------------------------------------------------------------------------
@@ -212,9 +231,12 @@ if __name__ == "__main__":
         col_to_encode = ['TYPE','ADMINISTRATIVE_AREA_LEVEL_2','SUBLOCALITY']
 
         scaler = Scaler()
-        encoder = OneHotEncoder()
+        x_encoder = OneHotEncoder()
+        y_encoder = OneHotEncoder()
 
-        processed_X_train, processed_Y_train, processed_X_test = preprocess_data(X_train, y_train, X_test, col_to_scale, col_to_encode, scaler, encoder)
+        encoders = [x_encoder, y_encoder]
+
+        processed_X_train, processed_Y_train, processed_X_test, processed_Y_test = preprocess_data(X_train, y_train, X_test, y_test, col_to_scale, col_to_encode, scaler, encoders)
 
         processed_X_train = processed_X_train.T
         processed_Y_train = processed_Y_train.T
@@ -223,10 +245,10 @@ if __name__ == "__main__":
         # Data description
         print(f"X_train #{data_set} shape: {processed_X_train.shape}")
         print(f"y_train #{data_set} shape: {processed_Y_train.shape}")
-        print(f"X_test #{data_set} shape: {processed_X_test.shape}")
+        print(f"X_test #{data_set} shape: {processed_X_test.shape}\n")
 
         network_layer_sizes = [processed_X_train.shape[0], 10, 1]    # input_size, { hidden_size .. }, output_size
-        mlp = MLP(layer_size = network_layer_sizes)
+        mlp = MLP(layer_size= network_layer_sizes, output_encoder=y_encoder)
         
         training_data = zip(processed_X_train, processed_Y_train)
         test_data = zip(processed_X_test, y_test)
@@ -234,7 +256,7 @@ if __name__ == "__main__":
         mlp.train(training_data, epochs=1000, learning_rate=0.01, batch_size=100, test_data=test_data)
         predictions = mlp.predict(processed_X_test)
 
-        result = ['BEDS'] + [str(i) for i in self.parse_results(predictions)]
+        result = ['BEDS'] + [str(i) for i in y_encoder.inverse_transform('BEDS', predictions)]
         result = '\n'.join(result)
 
         with open(OUTPUT_FILE, FILE_WRITE_FORMAT) as output_file:
