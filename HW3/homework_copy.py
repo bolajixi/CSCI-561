@@ -11,11 +11,13 @@ class MLP:
         self.sizes_per_layer = layer_size
         self.num_layers = len(layer_size)
 
+        self.count = 0
+
         # Initialize weights and biases for hidden layer --> output layer
-        self.weights = [np.random.randn(layer_output_size, layer_input_size) / np.sqrt(layer_input_size)
+        self.weights = [np.random.randn(layer_input_size, layer_output_size) / np.sqrt(layer_input_size)
                         for layer_input_size, layer_output_size in zip(self.sizes_per_layer[:-1], self.sizes_per_layer[1:])]
 
-        self.biases = [np.random.randn(layer_size, 1) for layer_size in self.sizes_per_layer[1:]]
+        self.biases = [np.random.randn(1, layer_size) for layer_size in self.sizes_per_layer[1:]]
 
     def sigmoid(self, x):
         return 1 / (1 + np.exp(-x))
@@ -49,7 +51,9 @@ class MLP:
         all_z_vectors = []                          # list to store all the z vectors, layer by layer
         
         for bias, weight in zip(self.biases, self.weights):
-            current_z = np.dot(weight, current_activation) + bias
+            batch_size = current_activation.shape[0]
+            print('-----', current_activation.shape, weight[:batch_size].shape, bias.shape)
+            current_z = np.dot(current_activation, weight) + bias
             all_z_vectors.append(current_z)
 
             current_activation = self.relu(current_z)
@@ -62,24 +66,23 @@ class MLP:
 
         output_error = (all_activations[-1] - y) * self.relu_derivative(all_z_vectors[-1])
         nabla_b[-1] = output_error
-        nabla_w[-1] = np.dot(output_error, all_activations[-2].transpose())
+        nabla_w[-1] = np.dot(all_activations[-2].transpose(), output_error)
 
         for l in range(2, self.num_layers):
             z = all_z_vectors[-l]
             d_relu = self.relu_derivative(z)
-            output_error = np.dot(self.weights[-l+1].transpose(), output_error) * d_relu
+            output_error = np.dot(output_error, self.weights[-l+1].transpose()) * d_relu
             nabla_b[-l] = output_error
-            nabla_w[-l] = np.dot(output_error, all_activations[-l-1].transpose())
+            nabla_w[-l] = np.dot(all_activations[-l-1].transpose(), output_error)
 
         return (nabla_b, nabla_w)
 
 
-    def _update_mini_batch(self, batch, learning_rate):
+    def _update_mini_batch(self, X_batch, y_batch, learning_rate):
         nabla_b = [np.zeros(bias.shape) for bias in self.biases]
         nabla_w = [np.zeros(weight.shape) for weight in self.weights]
 
-        batch_size = len(batch)
-        X_batch, y_batch = (batch)
+        batch_size = len(X_batch)
 
         delta_nabla_b, delta_nabla_w = self.backward(X_batch, y_batch, learning_rate)
         nabla_b = [nb+dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
@@ -92,23 +95,17 @@ class MLP:
                        for b, nb in zip(self.biases, nabla_b)]
 
     def train(self, training_data, epochs, learning_rate, batch_size, test_data=None):
-        data_size = len(training_data[0][1])
-        print(f"Data size: {len(training_data[0][1])}")
+        data_size = len(training_data[0])
 
         for epoch in range(epochs):
             # Shuffle training_data
-            # X_train, y_train = training_data
+            X_train, y_train = training_data
 
-            # shuffled_indices = np.random.permutation(X_train.shape[0])
-            # X_train = X_train[shuffled_indices]
-            # y_train = y_train[shuffled_indices]
+            X_batches = [ X_train[i:i+batch_size] for i in range(0, data_size, batch_size) ]
+            y_batches = [ y_train[i:i+batch_size] for i in range(0, data_size, batch_size) ]
 
-            # training_data = (X_train, y_train)
-
-            mini_batches = [training_data[i:i+batch_size] for i in range(0, data_size, batch_size)]
-
-            for batch in mini_batches:
-                self._update_mini_batch(batch, learning_rate)
+            for X_batch, y_batch in zip(X_batches, y_batches):
+                self._update_mini_batch(X_batch, y_batch, learning_rate)                
 
             if epoch % 100 == 0 and test_data is not None:                                    # Print error every 100 epochs
                 X, y = test_data
@@ -246,27 +243,19 @@ if __name__ == "__main__":
 
         processed_X_train, processed_Y_train, processed_X_test, processed_Y_test = preprocess_data(X_train, y_train, X_test, y_test, col_to_scale, col_to_encode, scaler, encoders)
 
-        processed_X_train = processed_X_train.T
-        processed_Y_train = processed_Y_train.T
-        processed_X_test = processed_X_test.T
-        processed_Y_test = processed_Y_test.T
-
         # Data description
         print(f"X_train #{data_set} shape: {processed_X_train.shape}")
         print(f"y_train #{data_set} shape: {processed_Y_train.shape}")
         print(f"X_test #{data_set} shape: {processed_X_test.shape}")
-        print(f"y_test #{data_set} shape: {y_test.shape}\n")
+        print(f"y_test #{data_set} shape: {processed_Y_test.shape}\n")
 
-        network_layer_sizes = [processed_X_train.shape[0], 10, processed_Y_train.shape[0]]    # input_size, { hidden_size .. }, output_size
+        network_layer_sizes = [processed_X_train.shape[1], 10, processed_Y_train.shape[1]]    # input_size, { hidden_size .. }, output_size
         mlp = MLP(layer_size= network_layer_sizes, output_encoder=y_encoder)
-
-        for weight in mlp.weights:
-            print(weight.shape)
         
         training_data = (processed_X_train, processed_Y_train.to_numpy())
         test_data = (processed_X_test, y_test.to_numpy())
 
-        mlp.train(training_data, epochs=1000, learning_rate=0.01, batch_size=100, test_data=test_data)
+        mlp.train(training_data, epochs=1000, learning_rate=0.01, batch_size=32, test_data=test_data)
         predictions = mlp.predict(processed_X_test)
 
         result = ['BEDS'] + [str(i) for i in y_encoder.inverse_transform('BEDS', predictions)]
