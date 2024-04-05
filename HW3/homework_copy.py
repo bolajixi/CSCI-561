@@ -118,17 +118,31 @@ class MLP:
             if epoch % 100 == 0 and test_data is not None:                                    # Print error every 100 epochs
                 X, y = test_data
 
-                result = (self.output_encoder.inverse_transform('BEDS', self.predict(X)), y)
-                num_correct_predictions = sum(int(x == y) for (x, y) in result)
+                predictions = ( self.output_encoder.inverse_transform('BEDS', self.predict(X)) ).tolist()
+                y = y.flatten().tolist()
 
-                for count, (prediction, actual) in enumerate(result):
-                    print(f"Prediction: {prediction}, --- Actual: {actual}")
+                result = zip(predictions, y)
+                num_correct_predictions = sum(int(x == y) for x, y in result)
+                accuracy = num_correct_predictions / len(y)
 
-                    if count == 10:     # Print first predictions
-                        break
+                print(f"Number of correct predictions: {num_correct_predictions}")
+                print(f"Epoch {epoch}: Accuracy: {accuracy}")
+
+                # for count, (prediction, actual) in enumerate(result):
+                #     print(f"Prediction: {prediction}, --- Actual: {actual}")
+
+                #     if count == 10:     # Print first predictions
+                #         break
 
     def predict(self, X):
-        return np.argmax(self.forward(X), axis=0)
+        predictions_idx = []
+
+        for sample_index in range(X.shape[0]):
+            x_sample = X[sample_index].reshape(1, -1)
+            predictions_idx.append(np.argmax(self.forward(x_sample)[0]))
+
+        predictions_idx = np.array(predictions_idx)
+        return predictions_idx
 
 # Helper functions
 class Scaler:
