@@ -98,7 +98,7 @@ class MLP:
         data_size = len(training_data[0])
 
         for epoch in range(epochs):
-            # Shuffle training_data
+            # TODO: Shuffle training_data [IMPORTANT]
             X_train, y_train = training_data
 
             X_batches = [ X_train[i:i+batch_size] for i in range(0, data_size, batch_size) ]
