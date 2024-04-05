@@ -286,8 +286,8 @@ if __name__ == "__main__":
 
         with open(OUTPUT_FILE, FILE_WRITE_FORMAT) as output_file:
             output_file.write(result + "\n")
+            
+        elapsed_time = time.time() - start_time
+        print(f"\n\nElapsed Time = {'%.2f' % round(elapsed_time, 2)} seconds")
 
         print("\n---------------------------------------\n")
-        
-        elapsed_time = time.time() - start_time
-        print(f"\n{result} \n\nElapsed Time = {'%.2f' % round(elapsed_time, 2)} seconds")
