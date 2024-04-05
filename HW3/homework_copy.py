@@ -39,7 +39,7 @@ class MLP:
     def forward(self, X):
         # Forward pass through the network
         for bias, weight in zip(self.biases, self.weights):
-            X = self.relu(np.dot(weight, X) + bias)
+            X = self.sigmoid(np.dot(X, weight) + bias)
 
         self.output = X
         return self.output
@@ -52,11 +52,11 @@ class MLP:
         
         for bias, weight in zip(self.biases, self.weights):
             batch_size = current_activation.shape[0]
-            print('-----', current_activation.shape, weight[:batch_size].shape, bias.shape)
+            # print('-----', current_activation.shape, weight[:batch_size].shape, bias.shape)
             current_z = np.dot(current_activation, weight) + bias
             all_z_vectors.append(current_z)
 
-            current_activation = self.relu(current_z)
+            current_activation = self.sigmoid(current_z)
             all_activations.append(current_activation)
 
 
@@ -64,14 +64,14 @@ class MLP:
         nabla_b = [np.zeros(bias.shape) for bias in self.biases]
         nabla_w = [np.zeros(weight.shape) for weight in self.weights]
 
-        output_error = (all_activations[-1] - y) * self.relu_derivative(all_z_vectors[-1])
+        output_error = (all_activations[-1] - y) * self.sigmoid_derivative(all_z_vectors[-1])
         nabla_b[-1] = output_error
         nabla_w[-1] = np.dot(all_activations[-2].transpose(), output_error)
 
         for l in range(2, self.num_layers):
             z = all_z_vectors[-l]
-            d_relu = self.relu_derivative(z)
-            output_error = np.dot(output_error, self.weights[-l+1].transpose()) * d_relu
+            d_sigmoid = self.sigmoid_derivative(z)
+            output_error = np.dot(output_error, self.weights[-l+1].transpose()) * d_sigmoid
             nabla_b[-l] = output_error
             nabla_w[-l] = np.dot(all_activations[-l-1].transpose(), output_error)
 
@@ -103,6 +103,11 @@ class MLP:
 
             X_batches = [ X_train[i:i+batch_size] for i in range(0, data_size, batch_size) ]
             y_batches = [ y_train[i:i+batch_size] for i in range(0, data_size, batch_size) ]
+
+            # Remove last batch if it is smaller than batch_size (e.g. if data_size is not divisible by batch_size)
+            if X_batches[-1].shape[0] != batch_size:
+                X_batches = X_batches[:-1]
+                y_batches = y_batches[:-1]
 
             for X_batch, y_batch in zip(X_batches, y_batches):
                 self._update_mini_batch(X_batch, y_batch, learning_rate)                
