@@ -247,6 +247,7 @@ def preprocess_data(x_train, y_train, x_test, y_test, col_to_scale, col_to_encod
 if __name__ == "__main__":
     OUTPUT_FILE = "output.txt"
     FILE_WRITE_FORMAT = "w"
+    total_elapsed_minutes = 0
     
     for data_set in range(1, 6):
         start_time = time.time()
@@ -286,8 +287,16 @@ if __name__ == "__main__":
 
         with open(OUTPUT_FILE, FILE_WRITE_FORMAT) as output_file:
             output_file.write(result + "\n")
-            
+
         elapsed_time = time.time() - start_time
-        print(f"\n\nElapsed Time = {'%.2f' % round(elapsed_time, 2)} seconds")
+        minutes = int(elapsed_time // 60)
+        seconds = int(elapsed_time % 60)
+
+        total_elapsed_minutes += minutes
+        total_elapsed_minutes += seconds / 60
+
+        print(f"\n\nElapsed Time = {minutes} minutes and {seconds} seconds")
 
         print("\n---------------------------------------\n")
+
+    print(f"\n\nTotal Elapsed Time Across All Data Sets = {total_elapsed_minutes} minutes")
