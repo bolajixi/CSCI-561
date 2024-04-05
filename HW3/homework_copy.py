@@ -37,22 +37,20 @@ class MLP:
         return exp_x / np.sum(exp_x, axis=1, keepdims=True)
 
     def forward(self, X):
-        # Forward pass through the network
+        # Forward pass through the networks (for prediction)
         for bias, weight in zip(self.biases, self.weights):
             X = self.sigmoid(np.dot(X, weight) + bias)
 
         self.output = X
         return self.output
 
-    def backward(self, X, y, learning_rate):
+    def backward(self, X, y):
         # Forward pass ------------------------------------------------------
         current_activation = X
         all_activations = [X]                       # list to store all the activations, layer by layer
         all_z_vectors = []                          # list to store all the z vectors, layer by layer
         
         for bias, weight in zip(self.biases, self.weights):
-            batch_size = current_activation.shape[0]
-            # print('-----', current_activation.shape, weight[:batch_size].shape, bias.shape)
             current_z = np.dot(current_activation, weight) + bias
             all_z_vectors.append(current_z)
 
@@ -84,9 +82,13 @@ class MLP:
 
         batch_size = len(X_batch)
 
-        delta_nabla_b, delta_nabla_w = self.backward(X_batch, y_batch, learning_rate)
-        nabla_b = [nb+dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
-        nabla_w = [nw+dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
+        for sample_index in range(X_batch.shape[0]):
+            x_sample = X_batch[sample_index].reshape(1, -1)
+            y_sample = y_batch[sample_index].reshape(1, -1)
+
+            delta_nabla_b, delta_nabla_w = self.backward(x_sample, y_sample)
+            nabla_b = [nb+dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
+            nabla_w = [nw+dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
 
         # Update weights and biases ------------------------------------------
         self.weights = [w-(learning_rate/batch_size)*nw
@@ -125,7 +127,7 @@ class MLP:
                         break
 
     def predict(self, X):
-        return np.argmax(self.forward(X), axis=1)
+        return np.argmax(self.forward(X), axis=0)
 
 # Helper functions
 class Scaler:
