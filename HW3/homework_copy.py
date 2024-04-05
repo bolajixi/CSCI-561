@@ -1,6 +1,7 @@
 import csv
 import numpy as np
 import pandas as pd
+import time
 
 class MLP:
     def __init__(self, layer_size, output_encoder):
@@ -234,6 +235,7 @@ if __name__ == "__main__":
     FILE_WRITE_FORMAT = "w"
     
     for data_set in range(1, 6):
+        start_time = time.time()
         print(f"\n## -- Data Set {data_set}")
         print("---------------------------------------\n")
 
@@ -272,3 +274,6 @@ if __name__ == "__main__":
             output_file.write(result + "\n")
 
         print("\n---------------------------------------\n")
+        
+        elapsed_time = time.time() - start_time
+        print(f"\n{result} \n\nElapsed Time = {'%.2f' % round(elapsed_time, 2)} seconds")
