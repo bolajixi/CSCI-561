@@ -101,8 +101,12 @@ class MLP:
         data_size = len(training_data[0])
 
         for epoch in range(epochs):
-            # TODO: Shuffle training_data [IMPORTANT]
+            # Shuffle training_data
             X_train, y_train = training_data
+
+            indices = np.random.permutation(len(X_train))
+            X_train = X_train[indices]
+            y_train = y_train[indices]
 
             X_batches = [ X_train[i:i+batch_size] for i in range(0, data_size, batch_size) ]
             y_batches = [ y_train[i:i+batch_size] for i in range(0, data_size, batch_size) ]
@@ -127,12 +131,6 @@ class MLP:
 
                 print(f"Number of correct predictions: {num_correct_predictions}")
                 print(f"Epoch {epoch}: Accuracy: {accuracy}")
-
-                # for count, (prediction, actual) in enumerate(result):
-                #     print(f"Prediction: {prediction}, --- Actual: {actual}")
-
-                #     if count == 10:     # Print first predictions
-                #         break
 
     def predict(self, X):
         predictions_idx = []
