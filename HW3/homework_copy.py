@@ -2,6 +2,7 @@ import csv
 import numpy as np
 import pandas as pd
 import time
+import matplotlib.pyplot as plt
 
 class MLP:
     def __init__(self, layer_size, output_encoder):
@@ -99,6 +100,7 @@ class MLP:
 
     def train(self, training_data, epochs, learning_rate, batch_size, test_data=None):
         data_size = len(training_data[0])
+        accuracies = []
 
         for epoch in range(epochs):
             # Shuffle training_data
@@ -128,9 +130,18 @@ class MLP:
                 result = zip(predictions, y)
                 num_correct_predictions = sum(int(x == y) for x, y in result)
                 accuracy = num_correct_predictions / len(y)
+                accuracies.append(accuracy)
 
                 print(f"Number of correct predictions: {num_correct_predictions}")
                 print(f"Epoch {epoch}: Accuracy: {accuracy}")
+        
+        # Plotting accuracy
+        plt.plot(range(0, epochs, 100), accuracies, label='Accuracy Plot')
+        plt.title('Accuracy over epochs')
+        plt.xlabel('Epochs')
+        plt.ylabel('Accuracy')
+        plt.legend()
+        plt.show()
 
     def predict(self, X):
         predictions_idx = []
@@ -297,3 +308,7 @@ for data_set in range(1, 6):
     print("\n---------------------------------------\n")
 
 print(f"\n\nTotal Elapsed Time Across All Data Sets = {total_elapsed_minutes} minutes")
+
+# Done: Improve hidden layer neuron size from 10 to 80 (network can capture more features)
+# Done: Add longitude and latitude (provide more information) -- this does not seem to improve accuracy
+# TODO: Update activation from sigmoid to relu / leaky relu to improve convergence
