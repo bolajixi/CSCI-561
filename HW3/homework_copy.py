@@ -244,59 +244,58 @@ def preprocess_data(x_train, y_train, x_test, y_test, col_to_scale, col_to_encod
 
 
 # Core Algorithm ------------------------------------------------------------------------------
-if __name__ == "__main__":
-    OUTPUT_FILE = "output.txt"
-    FILE_WRITE_FORMAT = "w"
-    total_elapsed_minutes = 0
+OUTPUT_FILE = "output.txt"
+FILE_WRITE_FORMAT = "w"
+total_elapsed_minutes = 0
+
+for data_set in range(1, 6):
+    start_time = time.time()
+    print(f"\n## -- Data Set {data_set}")
+    print("---------------------------------------\n")
+
+    X_train, y_train, X_test, y_test = load_data(data_set)
+
+    col_to_scale = ['PRICE','BATH','PROPERTYSQFT']
+    col_to_encode = ['TYPE','ADMINISTRATIVE_AREA_LEVEL_2','SUBLOCALITY']
+
+    scaler = Scaler()
+    x_encoder = OneHotEncoder()
+    y_encoder = OneHotEncoder()
+
+    encoders = [x_encoder, y_encoder]
+
+    processed_X_train, processed_Y_train, processed_X_test, processed_Y_test = preprocess_data(X_train, y_train, X_test, y_test, col_to_scale, col_to_encode, scaler, encoders)
+
+    # Data description
+    print(f"X_train #{data_set} shape: {processed_X_train.shape}")
+    print(f"y_train #{data_set} shape: {processed_Y_train.shape}")
+    print(f"X_test #{data_set} shape: {processed_X_test.shape}")
+    print(f"y_test #{data_set} shape: {processed_Y_test.shape}\n")
+
+    network_layer_sizes = [processed_X_train.shape[1], 100, processed_Y_train.shape[1]]    # input_size, { hidden_size .. }, output_size
+    mlp = MLP(layer_size= network_layer_sizes, output_encoder=y_encoder)
     
-    for data_set in range(1, 6):
-        start_time = time.time()
-        print(f"\n## -- Data Set {data_set}")
-        print("---------------------------------------\n")
+    training_data = (processed_X_train, processed_Y_train.to_numpy())
+    test_data = (processed_X_test, y_test.to_numpy())
 
-        X_train, y_train, X_test, y_test = load_data(data_set)
+    mlp.train(training_data, epochs=1000, learning_rate=0.01, batch_size=32, test_data=test_data)
+    predictions = mlp.predict(processed_X_test)
 
-        col_to_scale = ['PRICE','BATH','PROPERTYSQFT']
-        col_to_encode = ['TYPE','ADMINISTRATIVE_AREA_LEVEL_2','SUBLOCALITY']
+    result = ['BEDS'] + [str(i) for i in y_encoder.inverse_transform('BEDS', predictions)]
+    result = '\n'.join(result)
 
-        scaler = Scaler()
-        x_encoder = OneHotEncoder()
-        y_encoder = OneHotEncoder()
+    with open(OUTPUT_FILE, FILE_WRITE_FORMAT) as output_file:
+        output_file.write(result + "\n")
 
-        encoders = [x_encoder, y_encoder]
+    elapsed_time = time.time() - start_time
+    minutes = int(elapsed_time // 60)
+    seconds = int(elapsed_time % 60)
 
-        processed_X_train, processed_Y_train, processed_X_test, processed_Y_test = preprocess_data(X_train, y_train, X_test, y_test, col_to_scale, col_to_encode, scaler, encoders)
+    total_elapsed_minutes += minutes
+    total_elapsed_minutes += seconds / 60
 
-        # Data description
-        print(f"X_train #{data_set} shape: {processed_X_train.shape}")
-        print(f"y_train #{data_set} shape: {processed_Y_train.shape}")
-        print(f"X_test #{data_set} shape: {processed_X_test.shape}")
-        print(f"y_test #{data_set} shape: {processed_Y_test.shape}\n")
+    print(f"\n\nElapsed Time = {minutes} minutes and {seconds} seconds")
 
-        network_layer_sizes = [processed_X_train.shape[1], 10, processed_Y_train.shape[1]]    # input_size, { hidden_size .. }, output_size
-        mlp = MLP(layer_size= network_layer_sizes, output_encoder=y_encoder)
-        
-        training_data = (processed_X_train, processed_Y_train.to_numpy())
-        test_data = (processed_X_test, y_test.to_numpy())
+    print("\n---------------------------------------\n")
 
-        mlp.train(training_data, epochs=1000, learning_rate=0.01, batch_size=32, test_data=test_data)
-        predictions = mlp.predict(processed_X_test)
-
-        result = ['BEDS'] + [str(i) for i in y_encoder.inverse_transform('BEDS', predictions)]
-        result = '\n'.join(result)
-
-        with open(OUTPUT_FILE, FILE_WRITE_FORMAT) as output_file:
-            output_file.write(result + "\n")
-
-        elapsed_time = time.time() - start_time
-        minutes = int(elapsed_time // 60)
-        seconds = int(elapsed_time % 60)
-
-        total_elapsed_minutes += minutes
-        total_elapsed_minutes += seconds / 60
-
-        print(f"\n\nElapsed Time = {minutes} minutes and {seconds} seconds")
-
-        print("\n---------------------------------------\n")
-
-    print(f"\n\nTotal Elapsed Time Across All Data Sets = {total_elapsed_minutes} minutes")
+print(f"\n\nTotal Elapsed Time Across All Data Sets = {total_elapsed_minutes} minutes")
