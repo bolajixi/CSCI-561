@@ -206,18 +206,36 @@ class OneHotEncoder:
 class LabelEncoder:
     def __init__(self):
         self.mapping = {}
+        self.reverse_mapping = {}
 
-    def fit(self, series):
-        unique_values = series.unique()
-        for index, value in enumerate(unique_values):
-            self.mapping[value] = index
+    def fit(self, df):
+        for column in df.columns:
+            unique_values = df[column].unique()
+            column_mapping = {}
+            column_reverse_mapping = {}
+            for index, value in enumerate(unique_values):
+                column_mapping[value] = index
+                column_reverse_mapping[index] = value
+            self.mapping[column] = column_mapping
+            self.reverse_mapping[column] = column_reverse_mapping
 
-    def transform(self, series):
-        return series.map(self.mapping)
+    def transform(self, df):
+        transformed_df = pd.DataFrame()
+        for column in df.columns:
+            transformed_df[column] = df[column].map(self.mapping[column])
+        return transformed_df
 
-    def fit_transform(self, series):
-        self.fit(series)
-        return self.transform(series)
+    def inverse_transform(self, column, df):
+        inverted_df = pd.DataFrame()
+        if column:
+            inverted_df[column] = df[column].map(self.reverse_mapping[column])
+        for column in df.columns:
+            inverted_df[column] = df[column].map(self.reverse_mapping[column])
+        return inverted_df
+
+    def fit_transform(self, df):
+        self.fit(df)
+        return self.transform(df)
 
 # Core functions ------------------------------------------------------------------------------
 def load_data(data_set):
@@ -254,8 +272,12 @@ def preprocess_data(x_train, y_train, x_test, y_test, col_to_scale, col_to_encod
     X_train_encoded = x_encoder.fit_transform(X_train_copy[col_to_encode])
     X_test_encoded = x_encoder.transform(X_test_copy[col_to_encode])
 
-    processed_X_train = pd.concat([X_train_copy, X_train_encoded], axis=1).drop(columns=col_to_encode).to_numpy()
-    processed_X_test = pd.concat([X_test_copy, X_test_encoded], axis=1).drop(columns=col_to_encode).to_numpy()
+    X_train_copy[col_to_encode] = X_train_encoded
+    X_test_copy[col_to_encode] = X_test_encoded
+
+    # uncomment for one-hot encoding
+    # processed_X_train = pd.concat([X_train_copy, X_train_encoded], axis=1).drop(columns=col_to_encode).to_numpy()
+    # processed_X_test = pd.concat([X_test_copy, X_test_encoded], axis=1).drop(columns=col_to_encode).to_numpy()
 
     # Encode categorical variables -- (Y)
     processed_Y_train = y_encoder.fit_transform(y_train)
@@ -263,7 +285,7 @@ def preprocess_data(x_train, y_train, x_test, y_test, col_to_scale, col_to_encod
 
     if y_test is not None:
         processed_Y_test = y_encoder.transform(y_test)
-        return processed_X_train, processed_Y_train, processed_X_test, processed_Y_test
+        return X_train_copy.to_numpy(), processed_Y_train, X_test_copy.to_numpy(), processed_Y_test
     
     return processed_X_train, processed_Y_train, processed_X_test, None
 
@@ -284,7 +306,7 @@ for data_set in range(1, 6):
     col_to_encode = ['TYPE','ADMINISTRATIVE_AREA_LEVEL_2','SUBLOCALITY']
 
     scaler = Scaler()
-    x_encoder = OneHotEncoder()
+    x_encoder = LabelEncoder()
     y_encoder = OneHotEncoder()
 
     encoders = [x_encoder, y_encoder]
@@ -297,9 +319,11 @@ for data_set in range(1, 6):
     print(f"X_test #{data_set} shape: {processed_X_test.shape}")
     print(f"y_test #{data_set} shape: {processed_Y_test.shape}\n")
 
-    network_layer_sizes = [processed_X_train.shape[1], 100, processed_Y_train.shape[1]]    # input_size, { hidden_size .. }, output_size
+    network_layer_sizes = [processed_X_train.shape[1], 80, 80, processed_Y_train.shape[1]]    # input_size, { hidden_size .. }, output_size
     mlp = MLP(layer_size= network_layer_sizes, output_encoder=y_encoder)
     
+    mlp.plot_filename += str(data_set)
+
     training_data = (processed_X_train, processed_Y_train.to_numpy())
     test_data = (processed_X_test, y_test.to_numpy())
 
