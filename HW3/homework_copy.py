@@ -13,7 +13,7 @@ class MLP:
         self.sizes_per_layer = layer_size
         self.num_layers = len(layer_size)
 
-        self.count = 0
+        self.plot_filename = "dataset_"
 
         # Initialize weights and biases for hidden layer --> output layer
         self.weights = [np.random.randn(layer_input_size, layer_output_size) / np.sqrt(layer_input_size)
@@ -41,7 +41,7 @@ class MLP:
     def forward(self, X):
         # Forward pass through the networks (for prediction)
         for bias, weight in zip(self.biases, self.weights):
-            X = self.sigmoid(np.dot(X, weight) + bias)
+            X = self.relu(np.dot(X, weight) + bias)
 
         self.output = X
         return self.output
@@ -56,7 +56,7 @@ class MLP:
             current_z = np.dot(current_activation, weight) + bias
             all_z_vectors.append(current_z)
 
-            current_activation = self.sigmoid(current_z)
+            current_activation = self.relu(current_z)
             all_activations.append(current_activation)
 
 
@@ -70,8 +70,8 @@ class MLP:
 
         for l in range(2, self.num_layers):
             z = all_z_vectors[-l]
-            d_sigmoid = self.sigmoid_derivative(z)
-            output_error = np.dot(output_error, self.weights[-l+1].transpose()) * d_sigmoid
+            d_relu = self.relu_derivative(z)
+            output_error = np.dot(output_error, self.weights[-l+1].transpose()) * d_relu
             nabla_b[-l] = output_error
             nabla_w[-l] = np.dot(all_activations[-l-1].transpose(), output_error)
 
@@ -141,7 +141,8 @@ class MLP:
         plt.xlabel('Epochs')
         plt.ylabel('Accuracy')
         plt.legend()
-        plt.show()
+        plt.savefig(self.plot_filename)
+        plt.close()
 
     def predict(self, X):
         predictions_idx = []
@@ -258,7 +259,7 @@ def preprocess_data(x_train, y_train, x_test, y_test, col_to_scale, col_to_encod
     encode categorical variables, and return the processed data.
     """
     drop_columns = ['ADDRESS', 'STATE', 'MAIN_ADDRESS', 'STREET_NAME', 'LONG_NAME', 
-                    'FORMATTED_ADDRESS', 'LATITUDE', 'LONGITUDE', 'LOCALITY', 'BROKERTITLE']
+                    'FORMATTED_ADDRESS', 'LOCALITY', 'BROKERTITLE']
     X_train_copy = x_train.copy().drop(columns=drop_columns)
     X_test_copy = x_test.copy().drop(columns=drop_columns)
 
@@ -302,7 +303,7 @@ for data_set in range(1, 6):
 
     X_train, y_train, X_test, y_test = load_data(data_set)
 
-    col_to_scale = ['PRICE','BATH','PROPERTYSQFT']
+    col_to_scale = ['PRICE','BATH','PROPERTYSQFT', 'LATITUDE', 'LONGITUDE',]
     col_to_encode = ['TYPE','ADMINISTRATIVE_AREA_LEVEL_2','SUBLOCALITY']
 
     scaler = Scaler()
@@ -319,7 +320,8 @@ for data_set in range(1, 6):
     print(f"X_test #{data_set} shape: {processed_X_test.shape}")
     print(f"y_test #{data_set} shape: {processed_Y_test.shape}\n")
 
-    network_layer_sizes = [processed_X_train.shape[1], 80, 80, processed_Y_train.shape[1]]    # input_size, { hidden_size .. }, output_size
+    network_layer_sizes = [processed_X_train.shape[1], 80, 50, processed_Y_train.shape[1]]    # input_size, { hidden_size .. }, output_size
+    print(f"Network Layer Sizes: {network_layer_sizes}\n")
     mlp = MLP(layer_size= network_layer_sizes, output_encoder=y_encoder)
     
     mlp.plot_filename += str(data_set)
@@ -327,7 +329,7 @@ for data_set in range(1, 6):
     training_data = (processed_X_train, processed_Y_train.to_numpy())
     test_data = (processed_X_test, y_test.to_numpy())
 
-    mlp.train(training_data, epochs=1000, learning_rate=0.01, batch_size=32, test_data=test_data)
+    mlp.train(training_data, epochs=500, learning_rate=0.01, batch_size=64, test_data=test_data)
     predictions = mlp.predict(processed_X_test)
 
     result = ['BEDS'] + [str(i) for i in y_encoder.inverse_transform('BEDS', predictions)]
