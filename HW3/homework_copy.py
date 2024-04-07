@@ -203,6 +203,22 @@ class OneHotEncoder:
         
         return original_data
 
+class LabelEncoder:
+    def __init__(self):
+        self.mapping = {}
+
+    def fit(self, series):
+        unique_values = series.unique()
+        for index, value in enumerate(unique_values):
+            self.mapping[value] = index
+
+    def transform(self, series):
+        return series.map(self.mapping)
+
+    def fit_transform(self, series):
+        self.fit(series)
+        return self.transform(series)
+
 # Core functions ------------------------------------------------------------------------------
 def load_data(data_set):
     """
